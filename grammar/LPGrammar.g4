@@ -1,8 +1,7 @@
 grammar LPGrammar;
 
 // SYNTACTIC RULES
-s : mainstatement s
-  | // Epsilon
+s : mainstatement EOF
   | EOF
   ;
 
@@ -36,6 +35,7 @@ statement : IDENTIFIER statementcomp
     | fordeclaration statement
     | labelcall statement
     | specialcall statement
+    | // Epsilon
     ;
 
 statementcomp : arrayaccessor EQUAL expression statement
@@ -47,13 +47,14 @@ arrayaccessor : LBRACKET expression RBRACKET
     | // Epsilon
     ;
 
-mainstatement : IDENTIFIER mainstatementscomp
-    | labelcall
-    | specialcall
-    | ifdeclaration
-    | whiledeclaration
-    | fordeclaration
-    | functiondeclaration
+mainstatement : IDENTIFIER mainstatementscomp mainstatement
+    | labelcall mainstatement
+    | specialcall mainstatement
+    | ifdeclaration mainstatement
+    | whiledeclaration mainstatement
+    | fordeclaration mainstatement
+    | functiondeclaration mainstatement
+    | // Epsilon
     ;
 
 mainstatementscomp : arrayaccessor EQUAL expression
@@ -181,16 +182,15 @@ LBRACKET : '[';
 RBRACKET : ']';
 PERIOD : '.';
 
-// SPECIAL TOKENS
-IDENTIFIER : [a-zA-Z][_a-zA-Z0-9]*;
-NUMBER : [0-9]+(.[0-9]+){0,1}; // A single point is allowed
-TEXT : '"' .*? '"';
-COMMENT: '\'' .*? '\n' -> skip; // Single line comments
-
-
 // True and false tokens must be matched without regard to case
 TRUE : '"' T R U E '"';
 FALSE : '"' F A L S E '"';
+
+// SPECIAL TOKENS
+IDENTIFIER : [a-zA-Z][_a-zA-Z0-9]*;
+NUMBER : [0-9]+('.'([0-9]*))?; // A single point is allowed
+TEXT : '"' .*? '"';
+COMMENT: '\'' .*? '\n' -> skip; // Single line comments
 
 // FRAGMENTS FOR CASE INSENSITIVITY
 fragment T : ('t'|'T');
