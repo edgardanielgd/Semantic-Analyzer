@@ -1,0 +1,18 @@
+// Translation from Small Basic to Javascript
+// 3rd Practice (Semmantic Analyzer)
+// Created by:
+// Miguel Angel Puentes Cespedes
+// Jhonatan Steven Rodriguez IbaÃ±ez
+// Edgar Daniel Gonzalez Diaz
+
+/* Global variables */
+/* End of global variables */
+
+// Function declaration
+function olademar () {
+	/* Function body */
+	// If declaration
+	if ( ) {
+		/* If body */
+	}
+}
