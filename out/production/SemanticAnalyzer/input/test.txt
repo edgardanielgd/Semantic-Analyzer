@@ -1,5 +1,15 @@
 Sub olademar
 If ( casa < 3 ) Then
 a = 3
+ElseIf (cosa > 4 And Cosita < 3) Then
+a = 4
+ElseIf (naty = "Naty") Then
+a = 2
+Else
+While (Naty = 2)
+While (Edgar = 3)
+a = 10
+EndWhile
+EndWhile
 EndIf
 EndSub

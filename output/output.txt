@@ -14,5 +14,19 @@ function olademar () {
 	// If declaration
 	if ( ) {
 		/* If body */
+	} else if ( ) {
+		/* Else if body */
+	} else if ( ) {
+		/* Else if body */
+	} else {
+		/* Else body */
+		// While declaration
+		while ( ) {
+			/* While body */
+			// While declaration
+			while ( ) {
+				/* While body */
+			}
+		}
 	}
 }
