@@ -6,26 +6,32 @@
 // Edgar Daniel Gonzalez Diaz
 
 /* Global variables */
+var a;
+
 /* End of global variables */
 
 // Function declaration
 function olademar () {
 	/* Function body */
 	// If declaration
-	if ( ) {
+	if ( casa[2]) {
 		/* If body */
-	} else if ( ) {
+		a = 3;
+	} else if ( cosa[2]>4AndCosita["ola"]<3) {
 		/* Else if body */
-	} else if ( ) {
+		a = 4;
+	} else if ( arequipe="adfjas") {
 		/* Else if body */
+		a = 2;
 	} else {
 		/* Else body */
 		// While declaration
-		while ( ) {
+		while ( Ola=2) {
 			/* While body */
 			// While declaration
-			while ( ) {
+			while ( Ola2=3) {
 				/* While body */
+				a = 10;
 			}
 		}
 	}

@@ -70,6 +70,96 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     }
 
     @Override
+    public T visitMainstatement(LPGrammarParser.MainstatementContext ctx){
+        // Visit a statement
+        // Resulting code will be defined as:
+        // <statement> ;
+
+        // If there is an identifier, then there are some cases to consider
+        if( ctx.IDENTIFIER() != null ){
+            // Check if identifier is a variable
+            CommonTypes variable = this.variables.get(ctx.IDENTIFIER().getText());
+
+            // Get complement of statement
+            LPGrammarParser.MainstatementscompContext statementcomp = ctx.mainstatementscomp();
+
+            // Useful for classifying statement
+            int type = 0;
+            if( statementcomp.COLON() != null ){
+                // This a label definition case
+                type = 1;
+            } else if( statementcomp.LPAREN() != null ){
+                // This is a function call case
+                type = 2;
+            } else {
+                // This is an assignation case
+                type = 3;
+            }
+
+            if( variable == null && (type == 1 || type == 3)) {
+                // Add variable definition to target code
+                this.variables.put(ctx.IDENTIFIER().getText(), new CommonTypes(
+                        ctx.IDENTIFIER().getText(), 1
+                ));
+                // TODO: Save variable type
+            }
+
+            // it is a good idea to always print target variable name
+            this.output += getIndentedLine(
+                    ctx.IDENTIFIER().getText()
+                    , false);
+
+            // Start translating rule depending on type
+            // It is a good idea
+            if( type == 2 ){
+                // This is a function call case
+                // Recall functions does not receive arguments in our source lang
+                this.output += "( );\n";
+            } else if( type == 3 ){
+                // This is an assignation case
+                LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
+
+                if( arrayaccessor != null ){
+                    // We need to add array accessor to target code
+                    visit(arrayaccessor);
+                }
+
+                // After getting all nested indexes, lets process assignation
+                this.output += " = ";
+
+                // Get expression
+                visit(statementcomp.expression());
+
+                this.output += ";\n";
+            } else {
+                // This is a label definition case
+            }
+
+            // Process further statement
+            if( ctx.mainstatement() != null ){
+                visit(ctx.mainstatement());
+            }
+        }
+        else if( ctx.ifdeclaration() != null ){
+            // This is an if declaration case
+            visit(ctx.ifdeclaration());
+        }
+        else if( ctx.whiledeclaration() != null ){
+            // This is a while declaration case
+            visit(ctx.whiledeclaration());
+        }
+        else if( ctx.fordeclaration() != null ){
+            // This is a for declaration case
+            visit(ctx.fordeclaration());
+        }
+        else if( ctx.functiondeclaration() != null ){
+            // This is a function declaration case
+            visit(ctx.functiondeclaration());
+        }
+        return null;
+    }
+
+    @Override
     public T visitFunctiondeclaration(LPGrammarParser.FunctiondeclarationContext ctx) {
         // Visit a Sub definition
         // Functions in resulting code will be defined in the form:
@@ -77,7 +167,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Reminder, in theory we do not receive any argument
         // However for further works we could add them by CommonTypes implementation
 
-        // Print a cool code header
+        // TODO: Define function as a variable
+
         System.out.println("Reading a function declaration...");
         this.output += getIndentedLine("// Function declaration", true) +
                 getIndentedLine(String.format(
@@ -150,6 +241,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // 3. Else, final block of conditional
         // Note for this point a new line hasn't been printed yet
         System.out.println("Translates if continuation....");
+        System.out.println(ctx.getText());
         if( ctx.ELSE() != null ){
             // This the "else statement endif" case
             this.output += " else {\n"; // No indent needed (added in parent rule)
@@ -195,6 +287,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Visit if continuation
             // (which at this point has the same indentation level than original if)
+            System.out.println("ola");
             visit(ctx.ifcontinuation());
         } else if (ctx.ENDIF() != null){
             // This is the "endif" case
@@ -291,13 +384,305 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Now, check if there is a STEP keyword or we can deduce its just + 1
         // This will be handled by next rule: fordeclarationcomp
-        visit(ctx.fordeclarationcomp());
+
+        this.output += iteratorName;
+
+        // Get following fordeclarationcomp context (would include both step or direct statements block)
+        LPGrammarParser.FordeclarationcompContext forcomp = ctx.fordeclarationcomp();
+
+        // Check if there is a step statement
+        if(forcomp.STEP() != null) {
+            // There is a step statement, we need to generate a new assignation
+            // for iterator variable
+            this.output += " += ";
+
+            // Get increment expression
+            visit(forcomp.expression());
+        } else {
+            // There is no step statement, we can deduce it is just + 1
+            this.output += "++";
+        }
+
+        // End for declaration
+        this.output += ") {\n"; // No indent needed
+
+        // Increase indentation level for embeded code
+        this.indentationLevel++;
+
+        this.output += getIndentedLine(
+                "/* For body */", true
+        );
+
+        // Print related statement data indented
+        if(forcomp.statement() != null)
+            visit(forcomp.statement());
+
+        // Decrease indentation since embeded code has already been parsed
+        this.indentationLevel--;
+
+        // End for corpus
+        this.output += getIndentedLine("}", true);
 
         return null;
     }
-    // TODO: Complete forcomp visitor
-    // Recall that we need a custom context attribute there for passing in the
-    // iteration varname
+
+    @Override
+    public T visitStatement(LPGrammarParser.StatementContext ctx){
+        // Visit a statement
+        // Resulting code will be defined as:
+        // <statement> ;
+
+        // If there is an identifier, then there are some cases to consider
+        if( ctx.IDENTIFIER() != null ){
+            // Check if identifier is a variable
+            CommonTypes variable = this.variables.get(ctx.IDENTIFIER().getText());
+
+            // Get complement of statement
+            LPGrammarParser.StatementcompContext statementcomp = ctx.statementcomp();
+
+            // Useful for classifying statement
+            int type = 0;
+            if( statementcomp.COLON() != null ){
+                // This a label definition case
+                type = 1;
+            } else if( statementcomp.LPAREN() != null ){
+                // This is a function call case
+                type = 2;
+            } else {
+                // This is an assignation case
+                type = 3;
+            }
+
+            if( variable == null && (type == 1 || type == 3)) {
+                // Add variable definition to target code
+                this.variables.put(ctx.IDENTIFIER().getText(), new CommonTypes(
+                        ctx.IDENTIFIER().getText(), 1
+                ));
+                // TODO: Save variable type
+            }
+
+            // it is a good idea to always print target variable name
+            this.output += getIndentedLine(
+                    ctx.IDENTIFIER().getText()
+                    , false);
+
+            // Start translating rule depending on type
+            // It is a good idea
+            if( type == 2 ){
+                // This is a function call case
+                // Recall functions does not receive arguments in our source lang
+                this.output += "( );\n";
+            } else if( type == 3 ){
+                // This is an assignation case
+                LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
+
+                if( arrayaccessor != null ){
+                    // We need to add array accessor to target code
+                    visit(arrayaccessor);
+                }
+
+                // After getting all nested indexes, lets process assignation
+                this.output += " = ";
+
+                // Get expression
+                visit(statementcomp.expression());
+
+                this.output += ";\n";
+            } else {
+                // This is a label definition case
+            }
+
+            // Process further statement
+            if( ctx.statement() != null ){
+                visit(ctx.statement());
+            }
+        }
+        else if( ctx.ifdeclaration() != null ){
+            // This is an if declaration case
+            visit(ctx.ifdeclaration());
+        }
+        else if( ctx.whiledeclaration() != null ){
+            // This is a while declaration case
+            visit(ctx.whiledeclaration());
+        }
+        else if( ctx.fordeclaration() != null ){
+            // This is a for declaration case
+            visit(ctx.fordeclaration());
+        }
+        return null;
+    }
+
+    @Override
+    public T visitExpression(LPGrammarParser.ExpressionContext ctx){
+        // Visit an expression
+        // Note indent level is considered by parent levels
+
+        if( ctx.MINUS() != null ){
+            this.output += "-";
+        }
+
+        // Continue with actual expression data
+        visit(ctx.actualexpression());
+        return null;
+    }
+
+    @Override
+    public T visitActualexpression(LPGrammarParser.ActualexpressionContext ctx){
+        // Visit an actual expression
+        // Resulting code will be defined as:
+        // <actualexpression> <expressionhelper>
+
+        // Get subexpression
+        if( ctx.subexpression() != null){
+            visit(ctx.subexpression());
+        } else if ( ctx.LPAREN() != null ){
+            // This is a parenthesis case
+            // so we can return safely to parent expression case
+            this.output += "(";
+            visit(ctx.expression());
+            this.output += ")";
+        }
+
+        // Get expression complement
+        if( ctx.expressionhelper() != null ){
+            visit(ctx.expressionhelper());
+        }
+        return null;
+    }
+
+    @Override
+    public T visitExpressionhelper(LPGrammarParser.ExpressionhelperContext ctx){
+        // Check operator case
+        if( ctx.operator() != null ){
+            // This is an operator case
+            // so we can return safely to parent expression case
+            visit(ctx.operator());
+            visit(ctx.expression());
+        } else if( ctx.andoroperator() != null ){
+            // This is an AndOroperator case
+            // so we can return safely to parent expression case
+            visit(ctx.andoroperator());
+            visit(ctx.expression());
+        } else if( ctx.comparator() != null ){
+            // This is the weird case
+            // we can't allow statements in the form a < b < c, for example
+            visit(ctx.comparator());
+            visit(ctx.notcomparatorexp());
+        }
+
+        return null;
+    }
+
+    @Override
+    public T visitNotcomparatorexp(LPGrammarParser.NotcomparatorexpContext ctx){
+        // Get subexpression
+        if( ctx.subexpression() != null){
+            visit(ctx.subexpression());
+        } else if ( ctx.LPAREN() != null ){
+            // This is a parenthesis case
+            // so we can return safely to parent expression case
+            this.output += "(";
+            visit(ctx.expression());
+            this.output += ")";
+        }
+
+        // Get expression complement
+        if( ctx.notcomparatorexphelper() != null ){
+            visit(ctx.notcomparatorexphelper());
+        }
+        return null;
+    }
+
+    @Override
+    public T visitNotcomparatorexphelper(LPGrammarParser.NotcomparatorexphelperContext ctx){
+        // Check operator case
+        if( ctx.operator() != null ){
+            // This is an operator case
+            // so we can return safely to parent notcomparatorexp case
+            visit(ctx.operator());
+            visit(ctx.notcomparatorexp());
+        } else if( ctx.andoroperator() != null ){
+            // This is an AndOroperator case
+            // so we can return safely to parent expression case
+            visit(ctx.andoroperator());
+            visit(ctx.expression());
+        }
+        // Here is the difference, no comparators are allowed here
+
+        return null;
+    }
+
+    @Override
+    public T visitSubexpression(LPGrammarParser.SubexpressionContext ctx){
+
+        if( ctx.IDENTIFIER() != null ){
+            // Print variable name
+            this.output += ctx.IDENTIFIER().getText();
+
+            // Check if there is an array accessor
+            if( ctx.arrayaccessor() != null ){
+                System.out.println(ctx.arrayaccessor().getText());
+                visit(ctx.arrayaccessor());
+            }
+        } else if( ctx.NUMBER() != null ){
+            // Print number
+            this.output += ctx.NUMBER().getText();
+        } else if( ctx.TEXT() != null ){
+            // Print string
+            this.output += ctx.TEXT().getText();
+        } else if( ctx.TRUE() != null ){
+            // Print function call
+            this.output += "true";
+        } else if( ctx.FALSE() != null ){
+            // Print function call
+            this.output += "false";
+        } else if( ctx.specialcall() != null ){
+            // Print function call (There is a well known number of special calls)
+            visit(ctx.specialcall());
+        }
+
+        return null;
+    }
+
+    @Override
+    public T visitArrayaccessor(LPGrammarParser.ArrayaccessorContext ctx){
+
+        // Print array accessor
+        if( ctx.LBRACKET() != null ){
+            this.output += "[";
+
+            // Print expression
+            visit(ctx.expression());
+
+            // Print array accessor
+            this.output += "]";
+        }
+
+        return null;
+    }
+
+    @Override
+    public T visitOperator(LPGrammarParser.OperatorContext ctx){
+        // Print operator
+        this.output += " " + ctx.getText() + " ";
+        return null;
+    }
+
+    @Override
+    public T visitAndoroperator(LPGrammarParser.AndoroperatorContext ctx){
+        // Print operator
+        this.output += ctx.getText();
+        return null;
+    }
+
+    @Override
+    public T visitComparator(LPGrammarParser.ComparatorContext ctx){
+        // Print operator
+        String operator = ctx.getText();
+        this.output += operator == "<>" ? "!=" : operator;
+        return null;
+    }
+
 
     // Useful function for printing with indentation certain block codes
     public String getIndentedLine(String line, Boolean newLine){

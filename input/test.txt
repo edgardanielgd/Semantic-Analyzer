@@ -1,15 +1,19 @@
 Sub olademar
-If ( casa < 3 ) Then
-a = 3
-ElseIf (cosa > 4 And Cosita < 3) Then
-a = 4
-ElseIf (naty = "Naty") Then
-a = 2
-Else
-While (Naty = 2)
-While (Edgar = 3)
-a = 10
-EndWhile
-EndWhile
-EndIf
+    If ( casa < 3 ) Then
+        a = 3
+    ElseIf (cosa[2] > 4 And Cosita < 3) Then
+        a = 4*2/("Text")
+    ElseIf (arequipe = "adfjas") Then
+        a = 2
+    Else
+        While (Ola = 2)
+            While (Ola2 = 3)
+            a = 10
+            EndWhile
+
+            For a = 2 To 4 Step 2
+            a = 10
+            EndFor
+        EndWhile
+    EndIf
 EndSub

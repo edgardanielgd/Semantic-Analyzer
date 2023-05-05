@@ -22,7 +22,9 @@ whiledeclaration : WHILE LPAREN expression RPAREN statement ENDWHILE
 fordeclaration : FOR IDENTIFIER EQUAL expression TO expression fordeclarationcomp
     ;
 
-fordeclarationcomp : STEP expression statement ENDFOR
+fordeclarationcomp
+    // Complementary for declaration with STEP has a iteratorvariable expression
+    : STEP expression statement ENDFOR
     | statement ENDFOR
     ;
 
@@ -43,7 +45,7 @@ statementcomp : arrayaccessor EQUAL expression statement
     | COLON statement
     ;
 
-arrayaccessor : LBRACKET expression RBRACKET
+arrayaccessor : LBRACKET expression RBRACKET arrayaccessor
     | // Epsilon
     ;
 
