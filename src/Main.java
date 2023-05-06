@@ -38,9 +38,9 @@ public class Main {
         // containing the final output, which is in fact
         // a translation from Small Basic to Javascript
 
-        visitor.visit(tree);
+        String output = (String)visitor.visit(tree);
         File outputFile = new File(destFile);
         FileOutputStream writer = new FileOutputStream(outputFile);
-        writer.write(visitor.output.getBytes());
+        writer.write(output.getBytes());
     }
 }

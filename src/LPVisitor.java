@@ -22,51 +22,138 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
     // Also we must save already defined variables
     // Note the case of Small Basic does consider all variables as global
-    // So one definition anywhere should be enough
-    // Also save current variable type
-    HashMap<String, CommonTypes> variables = new HashMap<String, CommonTypes>();
+    // So one definition anywhere should be enough (we'll do at code's start)
+    //
+    // Variables will be defined at start as
+    // var <variable_name>;
+    HashSet<String> variables = new HashSet<>();
+
+    // Functions can even have the same name than some variables (in Small Basic)
+    // so we must save them in another place D:, also they must be defined at code start
+    // since small basic doesn't actually care about functions position
+    //
+    // Functions will be defined at start as
+    // Sub[<function_name>] = function() { ... };
+    HashMap<String, String> functions = new HashMap<>();
+
+    // Finally labels can even have the same than variables and functions
+    // so again we must difference them in any way
+    //
+    // Labels will be defined at start as
+    // since javascript doesn't have any goto statement, we will simulate it
+    // by means of a while and
+    // Goto[<label_name>] = true;
+    HashSet<String> labels = new HashSet<>();
 
     @Override
     public T visitS(LPGrammarParser.SContext ctx) {
         // We will visit each of the children of the root node
         // and append the result to the output string
-
+        //
         // Print a cool code header
         System.out.println("Generating code...");
 
-        for( int i = 0; i < ctx.getChildCount(); i++ ) {
+        // Helps with declaring statements in a custom order
+        String currentOutput = "";
+        String mainOutput = "";
 
-            // Visit each child, each child will alter in any way output
-            visit(ctx.getChild(i));
+        if( ctx.mainstatement() != null ){
+            mainOutput += (String)visit(ctx.mainstatement());
         }
 
         // All variables must be global
         // Place a block for defining all variables
-        String variablesBlock = getIndentedLine("/* Global variables */", true);
-        for( String key : this.variables.keySet() ) {
+        String variablesBlock = getIndentedLine( "/* Global variables */", true );
+        
+        for( String key : this.variables.toArray( new String[this.variables.size()] ) ) {
             variablesBlock += getIndentedLine(
                 String.format(
-                    "var %s;\n",
+                    "var %s;",
                     key
                 ), true
             );
         }
 
         // Add the variables block to the output
-        this.output = variablesBlock +
-                getIndentedLine("/* End of global variables */\n", true) +
-                this.output;
+        currentOutput = variablesBlock +
+                getIndentedLine("/* End of global variables */\n", true);
+
+        // Also all functions are global, lets define some
+        // prototypes in case they are used before definition
+        // by another function mainly
+        String functionsBlock = getIndentedLine( "/* Global functions prototypes */", true );
+        functionsBlock += getIndentedLine(
+            "/* This JSON Object is intentionally called 'Sub', a trick which will prevent \n"+
+                    " Small Basic variables to have crossed names with global functions container*/",
+            true
+        );
+
+        // Recall all functions are defined within a JSON object in case they have the
+        // same name than a variable
+        functionsBlock += getIndentedLine(
+            "var Sub = {",
+            true
+        );
+
+        // Lets define things in a beautiful way
+        this.indentationLevel++;
+
+        for( Map.Entry<String, String> function : this.functions.entrySet() ) {
+            // Yep, this is an empty prototype, in this way we ensure about the
+            // function is defined before being used
+            functionsBlock += getIndentedLine(
+                String.format(
+                    // Adding quotes in case function's name is a weird word
+                    "\"%s\" : () => {},",
+                    function.getKey()
+                    ), true
+                );
+        }
+
+        this.indentationLevel--;
+
+        functionsBlock += getIndentedLine(
+            "};",
+            true
+        );
+
+        currentOutput = currentOutput +
+                functionsBlock +
+                getIndentedLine("/* End of global functions prototypes */\n", true);
+
+        // Now include functions body
+        functionsBlock = getIndentedLine( "/* Global functions definitions */", true );
+
+        // Define again functions, this time with their actual bodies
+        for( Map.Entry<String, String> function : this.functions.entrySet() ) {
+            functionsBlock += getIndentedLine(
+                String.format(
+                    // This time its not due to weird functions...
+                    "Sub[\"%s\"] = () => %s",
+                    function.getKey(),
+                    function.getValue()
+                ), true
+            );
+        }
+
+        currentOutput = currentOutput +
+                functionsBlock +
+                getIndentedLine("/* End of global functions definitions */\n", true);
 
         // Add a cool header to the output
-        this.output =
+        currentOutput =
                 getIndentedLine("// Translation from Small Basic to Javascript", true) +
                 getIndentedLine("// 3rd Practice (Semmantic Analyzer)", true) +
                 getIndentedLine("// Created by:", true) +
                 getIndentedLine("// Miguel Angel Puentes Cespedes", true) +
                 getIndentedLine("// Jhonatan Steven Rodriguez Ibañez", true) +
                 getIndentedLine("// Edgar Daniel Gonzalez Diaz\n", true) +
-                this.output;
-        return null;
+                currentOutput;
+
+        // Finally append actual code
+        currentOutput = currentOutput + mainOutput;
+
+        return (T)currentOutput;
     }
 
     @Override
@@ -75,88 +162,109 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Resulting code will be defined as:
         // <statement> ;
 
+        String currentOutput = "";
+
         // If there is an identifier, then there are some cases to consider
         if( ctx.IDENTIFIER() != null ){
             // Check if identifier is a variable
-            CommonTypes variable = this.variables.get(ctx.IDENTIFIER().getText());
+            Boolean isDefined = this.variables.contains(ctx.IDENTIFIER().getText());
 
             // Get complement of statement
             LPGrammarParser.MainstatementscompContext statementcomp = ctx.mainstatementscomp();
 
             // Useful for classifying statement
-            int type = 0;
             if( statementcomp.COLON() != null ){
                 // This a label definition case
-                type = 1;
+                String labelName = ctx.IDENTIFIER().getText();
+
+                // Check if label was already defined
+                isDefined = this.labels.contains(labelName);
+
+                if( !isDefined ) {
+                    // Add label definition
+                    this.labels.add(labelName);
+                }
+
+                currentOutput += getIndentedLine(
+                        labelName + ":"
+                        , false);
+
+                // TODO: Print needed javascript code for simulating labels and Goto instructions
+
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
-                type = 2;
+                // Presented in the form:
+                //
+                // Sub[<function name>]();
+
+                currentOutput += getIndentedLine(
+                        "Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
+                        , false);
             } else {
-                // This is an assignation case
-                type = 3;
-            }
+                // This is an assignation case (Variable definition maybe)
+                String varName = ctx.IDENTIFIER().getText();
 
-            if( variable == null && (type == 1 || type == 3)) {
-                // Add variable definition to target code
-                this.variables.put(ctx.IDENTIFIER().getText(), new CommonTypes(
-                        ctx.IDENTIFIER().getText(), 1
-                ));
-                // TODO: Save variable type
-            }
+                // Check if variable was already defined
+                isDefined = this.variables.contains(varName);
 
-            // it is a good idea to always print target variable name
-            this.output += getIndentedLine(
-                    ctx.IDENTIFIER().getText()
-                    , false);
+                if( !isDefined ) {
+                    // Add variable definition
+                    this.variables.add(varName);
+                }
 
-            // Start translating rule depending on type
-            // It is a good idea
-            if( type == 2 ){
-                // This is a function call case
-                // Recall functions does not receive arguments in our source lang
-                this.output += "( );\n";
-            } else if( type == 3 ){
-                // This is an assignation case
+                // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
+
+                // Add variable name
+                currentOutput += getIndentedLine(
+                        varName
+                        , false);
 
                 if( arrayaccessor != null ){
                     // We need to add array accessor to target code
-                    visit(arrayaccessor);
+                    currentOutput += visit(arrayaccessor);
                 }
 
                 // After getting all nested indexes, lets process assignation
-                this.output += " = ";
+                currentOutput += " = ";
 
                 // Get expression
-                visit(statementcomp.expression());
-
-                this.output += ";\n";
-            } else {
-                // This is a label definition case
+                currentOutput += visit(statementcomp.expression());
+                currentOutput += ";\n";
             }
         }
         else if( ctx.ifdeclaration() != null ){
             // This is an if declaration case
-            visit(ctx.ifdeclaration());
+            currentOutput += visit(ctx.ifdeclaration());
         }
         else if( ctx.whiledeclaration() != null ){
             // This is a while declaration case
-            visit(ctx.whiledeclaration());
+            currentOutput += visit(ctx.whiledeclaration());
         }
         else if( ctx.fordeclaration() != null ){
             // This is a for declaration case
-            visit(ctx.fordeclaration());
+            currentOutput += visit(ctx.fordeclaration());
         }
         else if( ctx.functiondeclaration() != null ){
             // This is a function declaration case
-            visit(ctx.functiondeclaration());
+            // We can't just add it as variable, instead, we will
+            // save its definition and use declare it globally later
+            String functionDeclaration = (String)visit(ctx.functiondeclaration());
+
+            // Save its declaration related to its name, so we can allow
+            // javascript code to have global references to functions
+            String functionName = ctx.functiondeclaration().IDENTIFIER().getText();
+            functions.put(
+                    functionName,
+                    functionDeclaration
+            );
         }
 
-        // Process further statement
+        // Process further statements
         if( ctx.mainstatement() != null ){
-            visit(ctx.mainstatement());
+            currentOutput += visit(ctx.mainstatement());
         }
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -167,29 +275,30 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Reminder, in theory we do not receive any argument
         // However for further works we could add them by CommonTypes implementation
 
-        // TODO: Define function as a variable
+        String currentOutput = "";
 
         System.out.println("Reading a function declaration...");
-        this.output += getIndentedLine("// Function declaration", true) +
+        currentOutput += getIndentedLine("// Function declaration", true) +
                 getIndentedLine(String.format(
-                        "function %s () {",
+                        "{",
                         ctx.IDENTIFIER().getText()
                 ),true);
+
         // Indent function contents
         this.indentationLevel++;
 
-        this.output += getIndentedLine("/* Function body */", true);
+        currentOutput += getIndentedLine("/* Function body */", true);
 
         // Visit statements block only if there is any
         if( ctx.statement() != null ) {
-            visit(ctx.statement());
+            currentOutput += visit(ctx.statement());
         }
 
         // Reverse indentation level added before starting function body
         this.indentationLevel--;
-        this.output += getIndentedLine("}", true);
+        currentOutput += getIndentedLine("}", false);
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -198,40 +307,41 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Resulting code will be defined as:
         // if( <condition> ) { <body> }
         // indentation level will be considered
+        String currentOutput = "";
         System.out.println("Reading if declaration...");
-        this.output += getIndentedLine("// If declaration", true) +
+        currentOutput += getIndentedLine("// If declaration", true) +
                 getIndentedLine(
                         "if ( "
                 , false);
 
         // Visit child expression (which represents a conditional)
         // Note expressions won't print new lines by default
-        visit(ctx.expression());
+        currentOutput += visit(ctx.expression());
 
-        this.output += ") {\n"; // No indent needed
+        currentOutput += ") {\n"; // No indent needed
 
         // Increase indentation level for embeded code
         this.indentationLevel++;
 
-        this.output += getIndentedLine(
+        currentOutput += getIndentedLine(
                 "/* If body */", true
         );
 
         // Print related statement data indented
         if(ctx.statement() != null)
-            visit(ctx.statement());
+            currentOutput += visit(ctx.statement());
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
 
         // End if corpus
-        this.output += getIndentedLine("}", false);
+        currentOutput += getIndentedLine("}", false);
 
         // Visit if continuation
         // (which at this point has the same indentation level than original if)
-        visit(ctx.ifcontinuation());
+        currentOutput += visit(ctx.ifcontinuation());
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -242,59 +352,60 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // 3. Else, final block of conditional
         // Note for this point a new line hasn't been printed yet
         System.out.println("Translates if continuation....");
+        String currentOutput = "";
         if( ctx.ELSE() != null ){
             // This the "else statement endif" case
-            this.output += " else {\n"; // No indent needed (added in parent rule)
+            currentOutput += " else {\n"; // No indent needed (added in parent rule)
 
             // Create a block for else statement
             this.indentationLevel++;
-            this.output += getIndentedLine(
+            currentOutput += getIndentedLine(
                     "/* Else body */", true
             );
 
             if(ctx.statement() != null)
-                visit(ctx.statement());
+                currentOutput += visit(ctx.statement());
 
             // Rollback indentation since else is finished
             this.indentationLevel--;
 
             // Close else brackets
-            this.output += getIndentedLine("}", true);
+            currentOutput += getIndentedLine("}", true);
         } else if(ctx.ELSEIF() != null){
             // This is the "elseif ( expression ) then statement ifcontinuation" case
-            this.output += " else if ( "; // No indent needed (added in parent rule)
+            currentOutput += " else if ( "; // No indent needed (added in parent rule)
 
             // Visit child expression (which represents a conditional)
             // Note expressions won't print new lines by default
-            visit(ctx.expression());
+            currentOutput += visit(ctx.expression());
 
-            this.output += ") {\n"; // No indent needed
+            currentOutput += ") {\n"; // No indent needed
 
             // Create a block for else if statement
             this.indentationLevel++;
-            this.output += getIndentedLine(
+            currentOutput += getIndentedLine(
                     "/* Else if body */", true
             );
 
             if(ctx.statement() != null)
-                visit(ctx.statement());
+                currentOutput += visit(ctx.statement());
 
             // Rollback indentation since else if is finished
             this.indentationLevel--;
 
             // Close else if brackets (new line will be decided by next rule)
-            this.output += getIndentedLine("}", false);
+            currentOutput += getIndentedLine("}", false);
 
             // Visit if continuation
             // (which at this point has the same indentation level than original if)
-            visit(ctx.ifcontinuation());
+            currentOutput += visit(ctx.ifcontinuation());
         } else if (ctx.ENDIF() != null){
             // Just print another line
-            this.output += "\n";
+            currentOutput += "\n";
 
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -304,35 +415,37 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // while( <condition> ) { <body> }
         // indentation level will be considered
         System.out.println("Reading while declaration...");
-        this.output += getIndentedLine("// While declaration", true) +
+        String currentOutput = "";
+
+        currentOutput += getIndentedLine("// While declaration", true) +
                 getIndentedLine(
                         "while ( "
                         , false);
 
         // Visit child expression (which represents a conditional)
         // Note expressions won't print new lines by default
-        visit(ctx.expression());
+        currentOutput += visit(ctx.expression());
 
-        this.output += ") {\n"; // No indent needed
+        currentOutput += ") {\n"; // No indent needed
 
         // Increase indentation level for embeded code
         this.indentationLevel++;
 
-        this.output += getIndentedLine(
+        currentOutput += getIndentedLine(
                 "/* While body */", true
         );
 
         // Print related statement data indented
         if(ctx.statement() != null)
-            visit(ctx.statement());
+            currentOutput += visit(ctx.statement());
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
 
         // End while corpus
-        this.output += getIndentedLine("}", true);
+        currentOutput += getIndentedLine("}", true);
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -342,7 +455,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // for( <assignment> ; <condition> ; <assignment> ) { <body> }
         // indentation level will be considered
         System.out.println("Reading for declaration...");
-        this.output += getIndentedLine("// For declaration", true) +
+        String currentOutput = "";
+        currentOutput += getIndentedLine("// For declaration", true) +
                 getIndentedLine(
                         "for ( "
                         , false);
@@ -350,39 +464,38 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Check if variable is already defined, if not, define it locally in
         // target code
         String iteratorName = ctx.IDENTIFIER().getText();
-        CommonTypes iterator = this.variables.get(iteratorName);
+        Boolean isIterator = this.variables.contains(iteratorName);
 
-
-        if( iterator == null ){
+        if( ! isIterator ){
             // Iterator variable hasn't been defined at this point, better to define it
             // locally in target code
-            this.output += "let ";
+            currentOutput += "let ";
         }
 
-        this.output += iteratorName + " = ";
+        currentOutput += iteratorName + " = ";
 
-        // TODO: Check iterator is an integer variable
+        // TODO: Check iterator is an integer variable (not even neccessary)
         // How the heck to do that?
-
+        //
         // Generate first expression value (first assignation for iterator)
-        visit(ctx.expression(0));
+        currentOutput += visit(ctx.expression(0));
 
-        this.output += "; "; // No indent needed
+        currentOutput += "; "; // No indent needed
 
         // Now generate stop condition, it will always have the form:
         // <iterator> <= <expression>
-        this.output += iteratorName + " <= ";
+        currentOutput += iteratorName + " <= ";
 
         // TODO: Check again if iterator is an integer variable
         // How the heck to do that? x2
-        visit(ctx.expression(1));
+        currentOutput += visit(ctx.expression(1));
 
-        this.output += "; "; // No indent needed
+        currentOutput += "; "; // No indent needed
 
         // Now, check if there is a STEP keyword or we can deduce its just + 1
         // This will be handled by next rule: fordeclarationcomp
 
-        this.output += iteratorName;
+        currentOutput += iteratorName;
 
         // Get following fordeclarationcomp context (would include both step or direct statements block)
         LPGrammarParser.FordeclarationcompContext forcomp = ctx.fordeclarationcomp();
@@ -391,36 +504,36 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         if(forcomp.STEP() != null) {
             // There is a step statement, we need to generate a new assignation
             // for iterator variable
-            this.output += " += ";
+            currentOutput += " += ";
 
             // Get increment expression
-            visit(forcomp.expression());
+            currentOutput += visit(forcomp.expression());
         } else {
             // There is no step statement, we can deduce it is just + 1
-            this.output += "++";
+            currentOutput += "++";
         }
 
         // End for declaration
-        this.output += ") {\n"; // No indent needed
+        currentOutput += ") {\n"; // No indent needed
 
         // Increase indentation level for embeded code
         this.indentationLevel++;
 
-        this.output += getIndentedLine(
+        currentOutput += getIndentedLine(
                 "/* For body */", true
         );
 
         // Print related statement data indented
         if(forcomp.statement() != null)
-            visit(forcomp.statement());
+            currentOutput += visit(forcomp.statement());
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
 
         // End for corpus
-        this.output += getIndentedLine("}", true);
+        currentOutput += getIndentedLine("}", true);
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -430,89 +543,98 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // <statement> ;
         // If there is an identifier, then there are some cases to consider
 
-
+        String currentOutput = "";
         if( ctx.IDENTIFIER() != null ){
             // Check if identifier is a variable
-            CommonTypes variable = this.variables.get(ctx.IDENTIFIER().getText());
+            Boolean isDefined = this.variables.contains(ctx.IDENTIFIER().getText());
 
             // Get complement of statement
             LPGrammarParser.StatementcompContext statementcomp = ctx.statementcomp();
 
             // Useful for classifying statement
-            int type = 0;
             if( statementcomp.COLON() != null ){
                 // This a label definition case
-                type = 1;
+                String labelName = ctx.IDENTIFIER().getText();
+
+                // Check if label was already defined
+                isDefined = this.labels.contains(labelName);
+
+                if( !isDefined ) {
+                    // Add label definition
+                    this.labels.add(labelName);
+                }
+
+                currentOutput += getIndentedLine(
+                        labelName + ":"
+                        , false);
+
+                // TODO: Print needed javascript code for simulating labels and Goto instructions
+
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
-                type = 2;
+                // Presented in the format:
+                //
+                // Sub[<function name>]();
+
+                currentOutput += getIndentedLine(
+                        "Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
+                        , false);
             } else {
-                // This is an assignation case
-                type = 3;
-            }
+                // This is an assignation case (Variable definition maybe)
+                String varName = ctx.IDENTIFIER().getText();
 
-            if( variable == null && (type == 1 || type == 3)) {
-                // Add variable definition to target code
-                this.variables.put(ctx.IDENTIFIER().getText(), new CommonTypes(
-                        ctx.IDENTIFIER().getText(), 1
-                ));
-                // TODO: Save variable type
-            }
+                // Check if variable was already defined
+                isDefined = this.variables.contains(varName);
 
-            // it is a good idea to always print target variable name
-            this.output += getIndentedLine(
-                    ctx.IDENTIFIER().getText()
-                    , false);
+                if( !isDefined ) {
+                    // Add variable definition
+                    this.variables.add(varName);
+                }
 
-            // Start translating rule depending on type
-            // It is a good idea
-            if( type == 2 ){
-                // This is a function call case
-                // Recall functions does not receive arguments in our source lang
-                this.output += "( );\n";
-            } else if( type == 3 ){
-                // This is an assignation case
+                // Print variable name as an start
+                currentOutput += getIndentedLine(
+                        varName
+                        , false);
+
+                // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
 
                 if( arrayaccessor != null ){
                     // We need to add array accessor to target code
-                    visit(arrayaccessor);
+                    currentOutput += visit(arrayaccessor);
                 }
 
                 // After getting all nested indexes, lets process assignation
-                this.output += " = ";
+                currentOutput += " = ";
 
                 // Get expression
-                visit(statementcomp.expression());
-
-                this.output += ";\n";
-            } else {
-                // This is a label definition case
+                currentOutput += visit(statementcomp.expression());
+                currentOutput += ";\n";
             }
         }
         else if( ctx.ifdeclaration() != null ){
             // This is an if declaration case
-            visit(ctx.ifdeclaration());
+            currentOutput += visit(ctx.ifdeclaration());
         }
         else if( ctx.whiledeclaration() != null ){
             // This is a while declaration case
-            visit(ctx.whiledeclaration());
+            currentOutput += visit(ctx.whiledeclaration());
         }
         else if( ctx.fordeclaration() != null ){
             // This is a for declaration case
-            visit(ctx.fordeclaration());
+            currentOutput += visit(ctx.fordeclaration());
         }
         else if( ctx.specialcall() != null ){
             // This is a special call case
-            visit(ctx.specialcall());
+            currentOutput += visit(ctx.specialcall());
         }
 
         if( ctx.statement() != null ){
             // Process further statement
-            visit(ctx.statement());
+            currentOutput += visit(ctx.statement());
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
@@ -520,13 +642,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Visit an expression
         // Note indent level is considered by parent levels
 
+        String currentOutput = "";
         if( ctx.MINUS() != null ){
-            this.output += "-";
+            currentOutput += "-";
         }
 
         // Continue with actual expression data
-        visit(ctx.actualexpression());
-        return null;
+        currentOutput += visit(ctx.actualexpression());
+        return (T)currentOutput;
     }
 
     @Override
@@ -534,166 +657,169 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Visit an actual expression
         // Resulting code will be defined as:
         // <actualexpression> <expressionhelper>
-
+        String currentOutput = "";
         // Get subexpression
         if( ctx.subexpression() != null){
-            visit(ctx.subexpression());
+            currentOutput += visit(ctx.subexpression());
         } else if ( ctx.LPAREN() != null ){
             // This is a parenthesis case
             // so we can return safely to parent expression case
-            this.output += "(";
-            visit(ctx.expression());
-            this.output += ")";
+            currentOutput += "(";
+            currentOutput += visit(ctx.expression());
+            currentOutput += ")";
         }
 
         // Get expression complement
         if( ctx.expressionhelper() != null ){
-            visit(ctx.expressionhelper());
+            currentOutput += visit(ctx.expressionhelper());
         }
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitExpressionhelper(LPGrammarParser.ExpressionhelperContext ctx){
         // Check operator case
+        String currentOutput = "";
         if( ctx.operator() != null ){
             // This is an operator case
             // so we can return safely to parent expression case
-            visit(ctx.operator());
-            visit(ctx.expression());
+            currentOutput += visit(ctx.operator());
+            currentOutput += visit(ctx.expression());
         } else if( ctx.andoroperator() != null ){
             // This is an AndOroperator case
             // so we can return safely to parent expression case
-            visit(ctx.andoroperator());
-            visit(ctx.expression());
+            currentOutput += visit(ctx.andoroperator());
+            currentOutput += visit(ctx.expression());
         } else if( ctx.comparator() != null ){
             // This is the weird case
             // we can't allow statements in the form a < b < c, for example
-            visit(ctx.comparator());
-            visit(ctx.notcomparatorexp());
+            currentOutput += visit(ctx.comparator());
+            currentOutput += visit(ctx.notcomparatorexp());
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitNotcomparatorexp(LPGrammarParser.NotcomparatorexpContext ctx){
         // Get subexpression
+        String currentOutput = "";
         if( ctx.subexpression() != null){
-            visit(ctx.subexpression());
+            currentOutput += visit(ctx.subexpression());
         } else if ( ctx.LPAREN() != null ){
             // This is a parenthesis case
             // so we can return safely to parent expression case
-            this.output += "(";
-            visit(ctx.expression());
-            this.output += ")";
+            currentOutput += "(";
+            currentOutput += visit(ctx.expression());
+            currentOutput += ")";
         }
 
         // Get expression complement
         if( ctx.notcomparatorexphelper() != null ){
-            visit(ctx.notcomparatorexphelper());
+            currentOutput += visit(ctx.notcomparatorexphelper());
         }
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitNotcomparatorexphelper(LPGrammarParser.NotcomparatorexphelperContext ctx){
         // Check operator case
+        String currentOutput = "";
         if( ctx.operator() != null ){
             // This is an operator case
             // so we can return safely to parent notcomparatorexp case
-            visit(ctx.operator());
-            visit(ctx.notcomparatorexp());
+            currentOutput += visit(ctx.operator());
+            currentOutput += visit(ctx.notcomparatorexp());
         } else if( ctx.andoroperator() != null ){
             // This is an AndOroperator case
             // so we can return safely to parent expression case
-            visit(ctx.andoroperator());
-            visit(ctx.expression());
+            currentOutput += visit(ctx.andoroperator());
+            currentOutput += visit(ctx.expression());
         }
         // Here is the difference, no comparators are allowed here
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitSubexpression(LPGrammarParser.SubexpressionContext ctx){
-
+        // Get subexpression
+        String currentOutput = "";
         if( ctx.IDENTIFIER() != null ){
             // Print variable name
-            this.output += ctx.IDENTIFIER().getText();
+            currentOutput += ctx.IDENTIFIER().getText();
 
             // Check if there is an array accessor
             if( ctx.arrayaccessor() != null ){
-                visit(ctx.arrayaccessor());
+                currentOutput += visit(ctx.arrayaccessor());
             }
         } else if( ctx.NUMBER() != null ){
             // Print number
-            this.output += ctx.NUMBER().getText();
+            currentOutput += ctx.NUMBER().getText();
         } else if( ctx.TEXT() != null ){
             // Print string
-            this.output += ctx.TEXT().getText();
+            currentOutput += ctx.TEXT().getText();
         } else if( ctx.TRUE() != null ){
             // Print function call
-            this.output += "true";
+            currentOutput += "true";
         } else if( ctx.FALSE() != null ){
             // Print function call
-            this.output += "false";
+            currentOutput += "false";
         } else if( ctx.specialcall() != null ){
             // Print function call (There is a well known number of special calls)
-            visit(ctx.specialcall());
+            currentOutput += visit(ctx.specialcall());
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitArrayaccessor(LPGrammarParser.ArrayaccessorContext ctx){
-
+        // Print array accessor
+        String currentOutput = "";
         if( ctx.LBRACKET() != null ){
             // Print array accessor
-            this.output += "[";
+            currentOutput += "[";
 
             // Print expression
-            visit(ctx.expression());
+            currentOutput += visit(ctx.expression());
 
             // Print array accessor
-            this.output += "]";
+            currentOutput += "]";
 
             // Go further in accessors
             if( ctx.arrayaccessor() != null ){
-                visit(ctx.arrayaccessor());
+                currentOutput += visit(ctx.arrayaccessor());
             }
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     @Override
     public T visitOperator(LPGrammarParser.OperatorContext ctx){
         // Print operator
-        this.output += " " + ctx.getText() + " ";
-        return null;
+        return (T) (" " + ctx.getText() + " ");
     }
 
     @Override
     public T visitAndoroperator(LPGrammarParser.AndoroperatorContext ctx){
         // Print operator
-        this.output += " " + ctx.getText() + " ";
-        return null;
+        return (T) (" " + ctx.getText() + " ");
     }
 
     @Override
     public T visitComparator(LPGrammarParser.ComparatorContext ctx){
         // Print operator
-        String operator = ctx.getText();
-        this.output += " " + (operator == "<>" ? "!=" : operator) + " ";
-        return null;
+        return (T) (" " + ctx.getText() + " ");
     }
 
     @Override
     public T visitSpecialcall(LPGrammarParser.SpecialcallContext ctx){
 
         System.out.println("Passes through special call");
+        String currentOutput = "";
+
         // Print function call (There is a well known number of special calls)
         LPGrammarParser.SpecialcallkeywordContext specialCall = ctx.specialcallkeyword();
         String methodName = ctx.IDENTIFIER().getText();
@@ -713,25 +839,62 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Check which keyword have we gotten
         if( specialCall.TEXTWINDOW() != null ){
-            System.out.println("Passes through textwindow: " + methodName);
-            if( methodName.equals("WriteLine") ){
-                this.output += getIndentedLine(
-                        "console.log(", false
-                );
 
-                // This instructions expects only one argument
-                if( argumentsData.length == 1 ){
-                    visit(argumentsData[0]);
-
-                    this.output += ");\n";
-                } else {
-                    System.out.println(
-                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
-                            "Error: WriteLine expects only one argument"
+            switch( methodName ){
+                case "WriteLine":
+                case "Write":
+                    // Print version in Javascript
+                    currentOutput += getIndentedLine(
+                            "console.log(", false
                     );
-                    System.exit(0);
-                }
+
+                    // This instructions expects only one argument
+                    if( argumentsData.length == 1 ){
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.WriteLine expects only one argument"
+                        );
+                    }
+                    break;
+
+                case "Read":
+                    // Read version in Javascript
+                    if( argumentsData.length == 0 ){
+                        currentOutput += getIndentedLine(
+                                "prompt();", true
+                        );
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.Read expects no arguments"
+                        );
+                    }
+                    break;
+                case "Show":
+                    // Lets say this is an "Alert" equivalent in Javascript
+                    if( argumentsData.length == 1 ){
+                        currentOutput += getIndentedLine(
+                                "alert(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.Show expects only one argument"
+                        );
+                    }
+                    break;
+                default:
+                        System.err.println(
+                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                    "Error: Unknown TextWindow method " + methodName
+                        );
             }
+
         } else if( specialCall.STACK() != null ){
 
         } else if( specialCall.ARRAY() != null ){
@@ -740,7 +903,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         }
 
-        return null;
+        return (T)currentOutput;
     }
 
     // Convert arguments into array of Strings

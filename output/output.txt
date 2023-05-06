@@ -6,14 +6,24 @@
 // Edgar Daniel Gonzalez Diaz
 
 /* Global variables */
+var a;
+var b;
+var c;
 var cosa;
-
 var algo;
-
 /* End of global variables */
 
-// Function declaration
-function ola () {
+/* Global functions prototypes */
+/* This JSON Object is intentionally called 'Sub', a trick which will prevent 
+ Small Basic variables to have crossed names with global functions container*/
+var Sub = {
+	"ola" : () => {},
+};
+/* End of global functions prototypes */
+
+/* Global functions definitions */
+Sub["ola"] = () => // Function declaration
+{
 	/* Function body */
 	cosa = 2;
 	// If declaration
@@ -37,3 +47,9 @@ function ola () {
 		}
 	}
 }
+/* End of global functions definitions */
+
+a = 3;
+b = 4;
+c = 5;
+Sub["ola"]();
