@@ -41,7 +41,6 @@ public class Main {
         visitor.visit(tree);
         File outputFile = new File(destFile);
         FileOutputStream writer = new FileOutputStream(outputFile);
-        System.out.println(visitor.output);
         writer.write(visitor.output.getBytes());
     }
 }

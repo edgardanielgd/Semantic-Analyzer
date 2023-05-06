@@ -31,7 +31,7 @@ fordeclarationcomp
 labelcall : GOTO IDENTIFIER
     ;
 
-statement : IDENTIFIER statementcomp
+statement : IDENTIFIER statementcomp statement
     | ifdeclaration statement
     | whiledeclaration statement
     | fordeclaration statement
@@ -40,12 +40,13 @@ statement : IDENTIFIER statementcomp
     | // Epsilon
     ;
 
-statementcomp : arrayaccessor EQUAL expression statement
-    | LPAREN expression RPAREN statement
-    | COLON statement
+statementcomp : arrayaccessor EQUAL expression
+    | LPAREN expression RPAREN
+    | COLON
     ;
 
 arrayaccessor : LBRACKET expression RBRACKET arrayaccessor
+    | EQUAL arrayaccessor
     | // Epsilon
     ;
 
@@ -63,6 +64,24 @@ mainstatementscomp : arrayaccessor EQUAL expression
     | LPAREN expression RPAREN
     | COLON
     ;
+
+// SINTAX CHECKER FOR NUMERICAL EXPRESSIONS AFTER STEP KEYWORD
+// ===========================================================
+aritmeticexpression : actualaritmeticexpression
+    | MINUS actualaritmeticexpression
+    ;
+
+actualaritmeticexpression :
+    | NUMBER aritmeticexpressionhelper
+    | IDENTIFIER aritmeticexpressionhelper
+    | LPAREN aritmeticexpression RPAREN aritmeticexpressionhelper
+    | specialcall aritmeticexpressionhelper
+    ;
+
+aritmeticexpressionhelper : operator aritmeticexpression
+    | // Epsilon
+    ;
+// ===========================================================
 
 expression : actualexpression
     | MINUS actualexpression
@@ -119,7 +138,6 @@ specialcall : specialcallkeyword PERIOD IDENTIFIER LPAREN arguments RPAREN
 
 specialcallkeyword : TEXTWINDOW
     | STACK
-    | CLOCK
     | ARRAY
     | PROGRAM
     ;
@@ -132,7 +150,7 @@ optionalarg : expression
     | // Epsilon
     ;
 
-furtherarguments : COMMA arguments furtherarguments
+furtherarguments : COMMA arguments
     | // Epsilon
     ;
 

@@ -1,19 +1,15 @@
-Sub olademar
-    If ( casa < 3 ) Then
-        a = 3
-    ElseIf (cosa[2] > 4 And Cosita < 3) Then
-        a = 4*2/("Text")
-    ElseIf (arequipe = "adfjas") Then
-        a = 2
-    Else
-        While (Ola = 2)
-            While (Ola2 = 3)
-            a = 10
-            EndWhile
-
-            For a = 2 To 4 Step 2
-            a = 10
-            EndFor
-        EndWhile
+Sub ola
+    cosa = 2
+    If (olademar = 4 + 2 * 3) Then
+        cosa = 3*2 <= 6
+        For i = 2 To 4 Step 2
+            cosa = 3*2 <= 6
+        EndFor
     EndIf
+    While (algo - 3*2 <= 6)
+        algo = 3*2 <= 6
+        If (casita And casita2 And casita3 And "False") Then
+            TextWindow.WriteLine("Hola")
+        EndIf
+    EndWhile
 EndSub

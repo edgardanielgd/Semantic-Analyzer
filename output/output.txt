@@ -6,33 +6,34 @@
 // Edgar Daniel Gonzalez Diaz
 
 /* Global variables */
-var a;
+var cosa;
+
+var algo;
 
 /* End of global variables */
 
 // Function declaration
-function olademar () {
+function ola () {
 	/* Function body */
+	cosa = 2;
 	// If declaration
-	if ( casa<3) {
+	if ( olademar = 4 + 2 * 3) {
 		/* If body */
-		a = 3;
-	} else if ( cosa[2]>4AndCosita<3) {
-		/* Else if body */
-		a = 4 * 2 / ("Text");
-	} else if ( arequipe="adfjas") {
-		/* Else if body */
-		a = 2;
-	} else {
-		/* Else body */
-		// While declaration
-		while ( Ola=2) {
-			/* While body */
-			// While declaration
-			while ( Ola2=3) {
-				/* While body */
-				a = 10;
-			}
+		cosa = 3 * 2 <= 6;
+		// For declaration
+		for ( let i = 2; i <= 4; i += 2) {
+			/* For body */
+			cosa = 3 * 2 <= 6;
+		}
+	}
+	// While declaration
+	while ( algo - 3 * 2 <= 6) {
+		/* While body */
+		algo = 3 * 2 <= 6;
+		// If declaration
+		if ( casita And casita2 And casita3 And false) {
+			/* If body */
+			console.log("Hola");
 		}
 	}
 }

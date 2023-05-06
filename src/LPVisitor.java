@@ -134,11 +134,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             } else {
                 // This is a label definition case
             }
-
-            // Process further statement
-            if( ctx.mainstatement() != null ){
-                visit(ctx.mainstatement());
-            }
         }
         else if( ctx.ifdeclaration() != null ){
             // This is an if declaration case
@@ -155,6 +150,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         else if( ctx.functiondeclaration() != null ){
             // This is a function declaration case
             visit(ctx.functiondeclaration());
+        }
+
+        // Process further statement
+        if( ctx.mainstatement() != null ){
+            visit(ctx.mainstatement());
         }
         return null;
     }
@@ -181,8 +181,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         this.output += getIndentedLine("/* Function body */", true);
 
         // Visit statements block only if there is any
-        if( ctx.statement() != null )
+        if( ctx.statement() != null ) {
             visit(ctx.statement());
+        }
 
         // Reverse indentation level added before starting function body
         this.indentationLevel--;
@@ -241,7 +242,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // 3. Else, final block of conditional
         // Note for this point a new line hasn't been printed yet
         System.out.println("Translates if continuation....");
-        System.out.println(ctx.getText());
         if( ctx.ELSE() != null ){
             // This the "else statement endif" case
             this.output += " else {\n"; // No indent needed (added in parent rule)
@@ -287,14 +287,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Visit if continuation
             // (which at this point has the same indentation level than original if)
-            System.out.println("ola");
             visit(ctx.ifcontinuation());
         } else if (ctx.ENDIF() != null){
-            // This is the "endif" case
-            // Note there is a pending new line to be printed (Next to last { token)
-            this.output += getIndentedLine(
-                    "\n/* End of if */", true
-            );
+            // Just print another line
+            this.output += "\n";
+
         }
 
         return null;
@@ -431,8 +428,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Visit a statement
         // Resulting code will be defined as:
         // <statement> ;
-
         // If there is an identifier, then there are some cases to consider
+
+
         if( ctx.IDENTIFIER() != null ){
             // Check if identifier is a variable
             CommonTypes variable = this.variables.get(ctx.IDENTIFIER().getText());
@@ -491,11 +489,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             } else {
                 // This is a label definition case
             }
-
-            // Process further statement
-            if( ctx.statement() != null ){
-                visit(ctx.statement());
-            }
         }
         else if( ctx.ifdeclaration() != null ){
             // This is an if declaration case
@@ -509,6 +502,16 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             // This is a for declaration case
             visit(ctx.fordeclaration());
         }
+        else if( ctx.specialcall() != null ){
+            // This is a special call case
+            visit(ctx.specialcall());
+        }
+
+        if( ctx.statement() != null ){
+            // Process further statement
+            visit(ctx.statement());
+        }
+
         return null;
     }
 
@@ -621,7 +624,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Check if there is an array accessor
             if( ctx.arrayaccessor() != null ){
-                System.out.println(ctx.arrayaccessor().getText());
                 visit(ctx.arrayaccessor());
             }
         } else if( ctx.NUMBER() != null ){
@@ -647,8 +649,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     @Override
     public T visitArrayaccessor(LPGrammarParser.ArrayaccessorContext ctx){
 
-        // Print array accessor
         if( ctx.LBRACKET() != null ){
+            // Print array accessor
             this.output += "[";
 
             // Print expression
@@ -656,6 +658,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Print array accessor
             this.output += "]";
+
+            // Go further in accessors
+            if( ctx.arrayaccessor() != null ){
+                visit(ctx.arrayaccessor());
+            }
         }
 
         return null;
@@ -671,7 +678,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     @Override
     public T visitAndoroperator(LPGrammarParser.AndoroperatorContext ctx){
         // Print operator
-        this.output += ctx.getText();
+        this.output += " " + ctx.getText() + " ";
         return null;
     }
 
@@ -679,10 +686,94 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     public T visitComparator(LPGrammarParser.ComparatorContext ctx){
         // Print operator
         String operator = ctx.getText();
-        this.output += operator == "<>" ? "!=" : operator;
+        this.output += " " + (operator == "<>" ? "!=" : operator) + " ";
         return null;
     }
 
+    @Override
+    public T visitSpecialcall(LPGrammarParser.SpecialcallContext ctx){
+
+        System.out.println("Passes through special call");
+        // Print function call (There is a well known number of special calls)
+        LPGrammarParser.SpecialcallkeywordContext specialCall = ctx.specialcallkeyword();
+        String methodName = ctx.IDENTIFIER().getText();
+
+        // Process arguments depending on the keyword
+        LPGrammarParser.ArgumentsContext arguments = ctx.arguments();
+        LPGrammarParser.ExpressionContext[] argumentsData = null;
+
+        if( arguments != null ){
+            // Read provided arguments
+            argumentsData = (LPGrammarParser.ExpressionContext[]) visit(arguments);
+        } else {
+            // No arguments were provided
+            argumentsData = new LPGrammarParser.ExpressionContext[0];
+        }
+
+
+        // Check which keyword have we gotten
+        if( specialCall.TEXTWINDOW() != null ){
+            System.out.println("Passes through textwindow: " + methodName);
+            if( methodName.equals("WriteLine") ){
+                this.output += getIndentedLine(
+                        "console.log(", false
+                );
+
+                // This instructions expects only one argument
+                if( argumentsData.length == 1 ){
+                    visit(argumentsData[0]);
+
+                    this.output += ");\n";
+                } else {
+                    System.out.println(
+                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                            "Error: WriteLine expects only one argument"
+                    );
+                    System.exit(0);
+                }
+            }
+        } else if( specialCall.STACK() != null ){
+
+        } else if( specialCall.ARRAY() != null ){
+
+        } else if( specialCall.PROGRAM() != null ){
+
+        }
+
+        return null;
+    }
+
+    // Convert arguments into array of Strings
+    @Override
+    public T visitArguments(LPGrammarParser.ArgumentsContext ctx){
+        // Get arguments
+
+        // Array result (will be parsed to array later)
+        List<LPGrammarParser.ExpressionContext> argumentsData = new ArrayList<>();
+
+        if( ctx.optionalarg() != null ){
+            // A real expression argument was written
+            argumentsData.add(ctx.optionalarg().expression());
+        }
+
+        LPGrammarParser.FurtherargumentsContext furtherArguments = ctx.furtherarguments();
+
+        if( furtherArguments != null && furtherArguments.COMMA() != null ){
+            // There are more arguments
+            // Get them
+
+            LPGrammarParser.ExpressionContext[] additionalArgument = (LPGrammarParser.ExpressionContext[]) visit(
+                    furtherArguments.arguments()
+            );
+
+            // Add them to the array
+            argumentsData.addAll(Arrays.asList(additionalArgument));
+        }
+
+        return (T)argumentsData.toArray(
+                new LPGrammarParser.ExpressionContext[argumentsData.size()]
+        );
+    }
 
     // Useful function for printing with indentation certain block codes
     public String getIndentedLine(String line, Boolean newLine){
