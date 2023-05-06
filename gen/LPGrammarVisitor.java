@@ -89,6 +89,24 @@ public interface LPGrammarVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitMainstatementscomp(LPGrammarParser.MainstatementscompContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link LPGrammarParser#aritmeticexpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAritmeticexpression(LPGrammarParser.AritmeticexpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link LPGrammarParser#actualaritmeticexpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitActualaritmeticexpression(LPGrammarParser.ActualaritmeticexpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link LPGrammarParser#aritmeticexpressionhelper}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAritmeticexpressionhelper(LPGrammarParser.AritmeticexpressionhelperContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link LPGrammarParser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

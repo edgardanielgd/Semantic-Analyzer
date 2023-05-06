@@ -8,14 +8,13 @@ import src.CommonTypes;
 
 public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Here we will override each of already defined visitors
-
+    //
     // Our visitor will generate an string containing the final translated code
     // Fortunately javascript doesn't neccesarily need to be indented or even
     // have newlines, so we will just append to the output string
-
+    //
     // We will also write final code with ; delimitors, however new lines
     // are a good practice we will seek to include as posiblee
-    String output = "";
 
     // Show indentation properly (this is also kinda prettier to read :) )
     int indentationLevel = 0;
@@ -45,6 +44,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Goto[<label_name>] = true;
     HashSet<String> labels = new HashSet<>();
 
+    // There is a special function on Small Basic called "Stack"
+    // we will simulate its use in the way its supposed to work in original language
+    // its just a set of Stacks identified by a string (key)
+    // Note its not an interpreter, so we will just save references and save them later
+    HashSet<String> stacks = new HashSet<>();
+
     @Override
     public T visitS(LPGrammarParser.SContext ctx) {
         // We will visit each of the children of the root node
@@ -57,9 +62,46 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         String currentOutput = "";
         String mainOutput = "";
 
+        this.indentationLevel++;
         if( ctx.mainstatement() != null ){
             mainOutput += (String)visit(ctx.mainstatement());
         }
+        this.indentationLevel--;
+
+        // We will need some extra util functions at start
+
+        currentOutput += getIndentedLine(
+            "/* Utility Functions and Classes */",
+            true
+        );
+
+        // First we will need a function to sleep (Program.Delay)
+        // we will use a promise to do so
+        String utilities = getIndentedLine(
+            "function sleep(ms) {",
+            true
+        );
+        this.indentationLevel++;
+        utilities += getIndentedLine(
+            "return new Promise(resolve => setTimeout(resolve, ms));",
+            true
+        );
+        this.indentationLevel--;
+        utilities += getIndentedLine(
+            "}",
+            true
+        );
+
+        // Define Stack class which will be helpful on Stack operations
+        // TODO: well, add this class
+
+        utilities += getIndentedLine(
+            "/* End of utility functions and classes */\n",
+            true
+        );
+
+
+        currentOutput += utilities;
 
         // All variables must be global
         // Place a block for defining all variables
@@ -75,7 +117,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         }
 
         // Add the variables block to the output
-        currentOutput = variablesBlock +
+        currentOutput += variablesBlock +
                 getIndentedLine("/* End of global variables */\n", true);
 
         // Also all functions are global, lets define some
@@ -104,7 +146,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             functionsBlock += getIndentedLine(
                 String.format(
                     // Adding quotes in case function's name is a weird word
-                    "\"%s\" : () => {},",
+                    "\"%s\" : async () => {},",
                     function.getKey()
                     ), true
                 );
@@ -129,7 +171,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             functionsBlock += getIndentedLine(
                 String.format(
                     // This time its not due to weird functions...
-                    "Sub[\"%s\"] = () => %s",
+                    "Sub[\"%s\"] = async () => %s",
                     function.getKey(),
                     function.getValue()
                 ), true
@@ -151,6 +193,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 currentOutput;
 
         // Finally append actual code
+        // However, lets embed all inside an async function, so we will be able to
+        // use sentences like Delay, for example
+        mainOutput = getIndentedLine("// Main Function\nasync function MAIN() {", true ) +
+        getIndentedLine(mainOutput + "\n}", true ) +
+        getIndentedLine("\nMAIN();\n", true );
+
         currentOutput = currentOutput + mainOutput;
 
         return (T)currentOutput;
@@ -198,7 +246,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 // Sub[<function name>]();
 
                 currentOutput += getIndentedLine(
-                        "Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
+                        "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
                         , false);
             } else {
                 // This is an assignation case (Variable definition maybe)
@@ -334,12 +382,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
 
-        // End if corpus
-        currentOutput += getIndentedLine("}", false);
-
         // Visit if continuation
         // (which at this point has the same indentation level than original if)
         currentOutput += visit(ctx.ifcontinuation());
+
+        // End if corpus
+        currentOutput += getIndentedLine("}", true);
 
         return (T)currentOutput;
     }
@@ -399,10 +447,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             // Visit if continuation
             // (which at this point has the same indentation level than original if)
             currentOutput += visit(ctx.ifcontinuation());
-        } else if (ctx.ENDIF() != null){
-            // Just print another line
-            currentOutput += "\n";
-
         }
 
         return (T)currentOutput;
@@ -577,7 +621,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 // Sub[<function name>]();
 
                 currentOutput += getIndentedLine(
-                        "Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
+                        "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
                         , false);
             } else {
                 // This is an assignation case (Variable definition maybe)
@@ -805,7 +849,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     @Override
     public T visitAndoroperator(LPGrammarParser.AndoroperatorContext ctx){
         // Print operator
-        return (T) (" " + ctx.getText() + " ");
+        String operatorString;
+        if( ctx.AND() != null ) operatorString = "&&";
+        else operatorString = "||";
+
+        return (T) (" " + operatorString + " ");
     }
 
     @Override
@@ -835,7 +883,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             // No arguments were provided
             argumentsData = new LPGrammarParser.ExpressionContext[0];
         }
-
 
         // Check which keyword have we gotten
         if( specialCall.TEXTWINDOW() != null ){
@@ -897,9 +944,77 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         } else if( specialCall.STACK() != null ){
 
+            switch( methodName ){
+                case "GetCount":
+                    break;
+                case "PushValue":
+                    break;
+                case "PopValue":
+                    break;
+                default:
+                    System.err.println(
+                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                    "Error: Unknown Stack method " + methodName
+                    );
+            }
         } else if( specialCall.ARRAY() != null ){
 
+            switch( methodName ){
+                case "GetCount":
+                    break;
+                case "PushValue":
+                    break;
+                case "PopValue":
+                    break;
+                default:
+                    System.err.println(
+                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                    "Error: Unknown Stack method " + methodName
+                    );
+            }
+
         } else if( specialCall.PROGRAM() != null ){
+
+            switch( methodName ) {
+
+                case "Delay":
+                    // Recall we are inside an async function always
+                    if( argumentsData.length == 1){
+                        currentOutput += getIndentedLine(
+                                "await sleep(",
+                                false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Program.Delay expects only one argument"
+                        );
+                    }
+
+                    break;
+
+                case "Pause":
+                    // Actually does the same compared with the source code
+                    currentOutput += getIndentedLine(
+                            "debugger;", true
+                    );
+                    break;
+
+                case "End":
+                    // Ends the program (we have to do it with an exception)
+                    currentOutput += getIndentedLine(
+                            "throw 'Program ended';", true
+                    );
+                    break;
+
+                default:
+                    System.err.println(
+                            "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                    "Error: Unknown Program method " + methodName
+                    );
+            }
 
         }
 

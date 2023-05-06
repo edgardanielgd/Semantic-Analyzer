@@ -138,6 +138,36 @@ public interface LPGrammarListener extends ParseTreeListener {
 	 */
 	void exitMainstatementscomp(LPGrammarParser.MainstatementscompContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link LPGrammarParser#aritmeticexpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterAritmeticexpression(LPGrammarParser.AritmeticexpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link LPGrammarParser#aritmeticexpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitAritmeticexpression(LPGrammarParser.AritmeticexpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link LPGrammarParser#actualaritmeticexpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterActualaritmeticexpression(LPGrammarParser.ActualaritmeticexpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link LPGrammarParser#actualaritmeticexpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitActualaritmeticexpression(LPGrammarParser.ActualaritmeticexpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link LPGrammarParser#aritmeticexpressionhelper}.
+	 * @param ctx the parse tree
+	 */
+	void enterAritmeticexpressionhelper(LPGrammarParser.AritmeticexpressionhelperContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link LPGrammarParser#aritmeticexpressionhelper}.
+	 * @param ctx the parse tree
+	 */
+	void exitAritmeticexpressionhelper(LPGrammarParser.AritmeticexpressionhelperContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link LPGrammarParser#expression}.
 	 * @param ctx the parse tree
 	 */

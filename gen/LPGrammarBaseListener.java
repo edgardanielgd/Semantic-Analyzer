@@ -173,6 +173,42 @@ public class LPGrammarBaseListener implements LPGrammarListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterAritmeticexpression(LPGrammarParser.AritmeticexpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAritmeticexpression(LPGrammarParser.AritmeticexpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterActualaritmeticexpression(LPGrammarParser.ActualaritmeticexpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitActualaritmeticexpression(LPGrammarParser.ActualaritmeticexpressionContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAritmeticexpressionhelper(LPGrammarParser.AritmeticexpressionhelperContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAritmeticexpressionhelper(LPGrammarParser.AritmeticexpressionhelperContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterExpression(LPGrammarParser.ExpressionContext ctx) { }
 	/**
 	 * {@inheritDoc}

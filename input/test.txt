@@ -10,6 +10,7 @@ Sub ola
         algo = 3*2 <= 6
         If (casita And casita2 And casita3 And "False") Then
             TextWindow.WriteLine("Hola")
+            Program.Delay(200)
         EndIf
     EndWhile
 EndSub

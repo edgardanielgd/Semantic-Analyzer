@@ -5,6 +5,12 @@
 // Jhonatan Steven Rodriguez IbaÃ±ez
 // Edgar Daniel Gonzalez Diaz
 
+/* Utility Functions and Classes */
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+/* End of utility functions and classes */
+
 /* Global variables */
 var a;
 var b;
@@ -17,39 +23,46 @@ var algo;
 /* This JSON Object is intentionally called 'Sub', a trick which will prevent 
  Small Basic variables to have crossed names with global functions container*/
 var Sub = {
-	"ola" : () => {},
+	"ola" : async () => {},
 };
 /* End of global functions prototypes */
 
 /* Global functions definitions */
-Sub["ola"] = () => // Function declaration
-{
-	/* Function body */
-	cosa = 2;
-	// If declaration
-	if ( olademar = 4 + 2 * 3) {
-		/* If body */
-		cosa = 3 * 2 <= 6;
-		// For declaration
-		for ( let i = 2; i <= 4; i += 2) {
-			/* For body */
-			cosa = 3 * 2 <= 6;
-		}
-	}
-	// While declaration
-	while ( algo - 3 * 2 <= 6) {
-		/* While body */
-		algo = 3 * 2 <= 6;
+Sub["ola"] = async () => 	// Function declaration
+	{
+		/* Function body */
+		cosa = 2;
 		// If declaration
-		if ( casita And casita2 And casita3 And false) {
+		if ( olademar = 4 + 2 * 3) {
 			/* If body */
-			console.log("Hola");
+			cosa = 3 * 2 <= 6;
+			// For declaration
+			for ( let i = 2; i <= 4; i += 2) {
+				/* For body */
+				cosa = 3 * 2 <= 6;
+			}
+		}
+		// While declaration
+		while ( algo - 3 * 2 <= 6) {
+			/* While body */
+			algo = 3 * 2 <= 6;
+			// If declaration
+			if ( casita && casita2 && casita3 && false) {
+				/* If body */
+				console.log("Hola");
+				await sleep(200);
+			}
 		}
 	}
-}
 /* End of global functions definitions */
 
-a = 3;
-b = 4;
-c = 5;
-Sub["ola"]();
+// Main Function
+async function MAIN() {
+	a = 3;
+	b = 4;
+	c = 5;
+	await Sub["ola"]();
+}
+
+MAIN();
+

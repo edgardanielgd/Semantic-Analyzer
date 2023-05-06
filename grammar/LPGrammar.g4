@@ -8,11 +8,10 @@ s : mainstatement EOF
 functiondeclaration : SUB IDENTIFIER statement ENDSUB
     ;
 
-ifdeclaration : IF LPAREN expression RPAREN THEN statement ifcontinuation
+ifdeclaration : IF LPAREN expression RPAREN THEN statement ifcontinuation ENDIF
     ;
 
-ifcontinuation : ENDIF
-    | ELSE statement ENDIF
+ifcontinuation : ELSE statement
     | ELSEIF LPAREN expression RPAREN THEN statement ifcontinuation
     ;
 
@@ -41,7 +40,7 @@ statement : IDENTIFIER statementcomp statement
     ;
 
 statementcomp : arrayaccessor EQUAL expression
-    | LPAREN expression RPAREN
+    | LPAREN RPAREN
     | COLON
     ;
 
@@ -61,7 +60,7 @@ mainstatement : IDENTIFIER mainstatementscomp mainstatement
     ;
 
 mainstatementscomp : arrayaccessor EQUAL expression
-    | LPAREN expression RPAREN
+    | LPAREN RPAREN
     | COLON
     ;
 
