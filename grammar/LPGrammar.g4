@@ -18,13 +18,13 @@ ifcontinuation : ELSE statement
 whiledeclaration : WHILE LPAREN expression RPAREN statement ENDWHILE
     ;
 
-fordeclaration : FOR IDENTIFIER EQUAL expression TO expression fordeclarationcomp
+fordeclaration : FOR IDENTIFIER EQUAL expression TO expression fordeclarationcomp ENDFOR
     ;
 
 fordeclarationcomp
     // Complementary for declaration with STEP has a iteratorvariable expression
-    : STEP expression statement ENDFOR
-    | statement ENDFOR
+    : STEP expression statement
+    | statement
     ;
 
 labelcall : GOTO IDENTIFIER

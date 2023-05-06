@@ -93,7 +93,64 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         );
 
         // Define Stack class which will be helpful on Stack operations
-        // TODO: well, add this class
+        utilities += getIndentedLine(
+        """
+            // Useful class for simulating Small Basic's Stacks
+            class Stack {
+            
+                // There will be some stack objects which must be saved
+                // and registered on execution time
+                // Each one will also be identified by its related name
+                static stacks = {};
+                
+                // Function for pushing data into a Stack
+                static pushStack(stackName, element) {
+                    if( this.stacks[stackName] == undefined ) {
+                        this.stacks[stackName] = new Stack();
+                    }
+                    this.stacks[stackName].push(element);
+                }
+                
+                // Function for removing data from Stack
+                static popStack(stackName) {
+                    if( this.stacks[stackName] == undefined ) {
+                        return undefined;
+                    }
+                    return this.stacks[stackName].pop();
+                }
+                
+                // Function for getting stack length
+                static getStackSize(stackName) {
+                    if( this.stacks[stackName] == undefined ) {
+                        return undefined;
+                    }
+                    return this.stacks[stackName].getSize();
+                }
+                
+                constructor() {
+                    this.items = [];
+                    this.size = 0;
+                }
+                push(element) {
+                    this.items.push(element);
+                    this.size ++;
+                }
+                pop() {
+                    if (this.items.length == 0)
+                        return undefined;
+                    this.size --;
+                    return this.items.pop();
+                }
+                peek() {
+                    return this.items[this.items.length - 1];
+                }
+                getSize() {
+                    return this.size;
+                }
+            }
+            """,
+            true
+        );
 
         utilities += getIndentedLine(
             "/* End of utility functions and classes */\n",

@@ -11,6 +11,12 @@ Sub ola
         If (casita And casita2 And casita3 And "False") Then
             TextWindow.WriteLine("Hola")
             Program.Delay(200)
+
+            ' Oalaflsdfls'
+            For k = 2 To 5 Step 3
+                TextWindow.WriteLine("Hola")
+                Program.Delay(200)
+            EndFor
         EndIf
     EndWhile
 EndSub

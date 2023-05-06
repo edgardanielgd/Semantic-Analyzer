@@ -3,6 +3,7 @@
 
 # Remove outputs
 out
+.idea
 
 # Log file
 *.log
