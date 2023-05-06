@@ -17,6 +17,13 @@ Sub ola
                 TextWindow.WriteLine("Hola")
                 Program.Delay(200)
             EndFor
+
+            For b = 2 To 10
+                Stack.PushValue("myarray", b)
+            EndFor
+
+            count = Stack.PopValue("myarray")
+            TextWindow.WriteLine(count)
         EndIf
     EndWhile
 EndSub

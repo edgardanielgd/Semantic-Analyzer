@@ -94,61 +94,64 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Define Stack class which will be helpful on Stack operations
         utilities += getIndentedLine(
-        """
-            // Useful class for simulating Small Basic's Stacks
-            class Stack {
-            
-                // There will be some stack objects which must be saved
-                // and registered on execution time
-                // Each one will also be identified by its related name
-                static stacks = {};
-                
-                // Function for pushing data into a Stack
-                static pushStack(stackName, element) {
-                    if( this.stacks[stackName] == undefined ) {
-                        this.stacks[stackName] = new Stack();
-                    }
-                    this.stacks[stackName].push(element);
-                }
-                
-                // Function for removing data from Stack
-                static popStack(stackName) {
-                    if( this.stacks[stackName] == undefined ) {
-                        return undefined;
-                    }
-                    return this.stacks[stackName].pop();
-                }
-                
-                // Function for getting stack length
-                static getStackSize(stackName) {
-                    if( this.stacks[stackName] == undefined ) {
-                        return undefined;
-                    }
-                    return this.stacks[stackName].getSize();
-                }
-                
-                constructor() {
-                    this.items = [];
-                    this.size = 0;
-                }
-                push(element) {
-                    this.items.push(element);
-                    this.size ++;
-                }
-                pop() {
-                    if (this.items.length == 0)
-                        return undefined;
-                    this.size --;
-                    return this.items.pop();
-                }
-                peek() {
-                    return this.items[this.items.length - 1];
-                }
-                getSize() {
-                    return this.size;
-                }
-            }
-            """,
+
+        "// Useful class for simulating Small Basic's Stacks\n" +
+            "class Stack {\n" +
+
+                "\t// There will be some stack objects which must be saved\n" +
+                "\t// and registered on execution time\n" +
+                "\t// Each one will also be identified by its related name\n" +
+                "\tstatic stacks = {};\n" +
+                "\n" +
+                "\t// Function for pushing data into a Stack\n" +
+                "\tstatic pushStack(stackName, element) {\n" +
+                    "\t\tif( this.stacks[stackName] == undefined ) {\n" +
+                    "\t\t\tthis.stacks[stackName] = new Stack();\n" +
+                    "\t\t}\n" +
+                    "\t\tthis.stacks[stackName].push(element);\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Function for removing data from Stack\n" +
+                "\tstatic popStack(stackName) {\n" +
+                    "\t\tif( this.stacks[stackName] == undefined ) {\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\t}\n" +
+                    "\t\treturn this.stacks[stackName].pop();\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Function for getting stack length\n" +
+                "\tstatic getStackSize(stackName) {\n" +
+                    "\t\tif( this.stacks[stackName] == undefined ) {\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t}\n" +
+                    "\t\treturn this.stacks[stackName].getSize();\n" +
+                "\t}\n" +
+                "\n" +
+                "\tconstructor() {\n" +
+                    "\t\tthis.items = [];\n" +
+                    "\t\tthis.size = 0;\n" +
+                "\t}\n" +
+                "\n" +
+                "\tpush(element) {\n" +
+                    "\t\tthis.items.push(element);\n" +
+                    "\t\tthis.size ++;\n" +
+                "\t}\n" +
+                "\n" +
+                "\tpop() {\n" +
+                    "\t\tif (this.items.length == 0)\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\tthis.size --;\n" +
+                    "\t\treturn this.items.pop();\n" +
+                "\t}\n" +
+                "\n" +
+                "\tpeek() {\n" +
+                    "\t\treturn this.items[this.items.length - 1];\n" +
+                "\t}\n" +
+                "\n" +
+                "\tgetSize() {\n" +
+                    "\t\treturn this.size;\n" +
+                "\t}\n" +
+            "}\n",
             true
         );
 
@@ -1003,10 +1006,55 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             switch( methodName ){
                 case "GetCount":
+                    if( argumentsData.length == 1) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Stack.getStackSize(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Stack.getStackSize expects one argument"
+                        );
+                    }
                     break;
                 case "PushValue":
+                    if( argumentsData.length == 2) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Stack.pushStack(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Stack.PushValue expects two arguments"
+                        );
+                    }
                     break;
                 case "PopValue":
+                    if( argumentsData.length == 1) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += "Stack.popStack(";
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ");\n";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Stack.PopValue expects one argument"
+                        );
+                    }
                     break;
                 default:
                     System.err.println(
@@ -1014,6 +1062,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                                     "Error: Unknown Stack method " + methodName
                     );
             }
+
         } else if( specialCall.ARRAY() != null ){
 
             switch( methodName ){
