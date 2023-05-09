@@ -38,3 +38,5 @@ If (c > 3) Then
 Else
     TextWindow.WriteLine("Adios")
 EndIf
+
+a["3"][2][false][2*3+2] = a["3"][2]

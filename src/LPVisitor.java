@@ -37,6 +37,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Sub[<function_name>] = function() { ... };
     HashMap<String, String> functions = new HashMap<>();
 
+    // Arrays would need special traits since Small Basic allow some weird stuff
+    // like a[2]["3"][5555], so we must use separate arrays and use them separately
+    // only when a variable is being indexed
+    //
+    // Arrays (Objects), or well, arrays, will be also defined at start as
+    // Array[<array_name>] = {};
+    HashSet<String> arrays = new HashSet<>();
+
     // Finally labels can even have the same than variables and functions
     // so again we must difference them in any way
     //
@@ -217,7 +225,29 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             "// Useful elements for printing data into DOM Object\n" +
             "function customPrint( text ) { TextWindow.innerHTML += text; }\n" +
             "function customPrintLine( text ) { TextWindow.innerHTML += text + \"<br>\"; }\n" +
-            "function customClear( ) { TextWindow.innerHTML = \"\"; }\n",
+            "function customClear( ) { TextWindow.innerHTML = \"\"; }\n\n" +
+            "// Utils for checking array elements existence\n" +
+            "function getValue( variable, indexes_sequence ) {\n" +
+            "\tlet iter_variable = variable;\n" +
+            "\tfor( let index of indexes_sequence ) { \n" +
+            "\t\tif( !Array.containsIndex( variable, index ) ) {\n" +
+                "\t\t\treturn undefined;\n" +
+            "\t\t}\n" +
+            "\t\titer_variable = iter_variable[index];\n" +
+            "\t}\n" +
+            "\treturn iter_variable;\n" +
+            "}\n\n" +
+            "// Generate objects before doing further actions, ie.e a[2][\"3\"]\n" +
+            "function checkValue( variable, indexes_sequence ) {\n" +
+            "\tlet iter_variable = variable;\n" +
+            "\tfor( let index of indexes_sequence ) { \n" +
+            "\t\tif( !Array.containsIndex( variable, index ) ) {\n" +
+            "\t\t\titer_variable[ index ] = {};\n" +
+            "\t\t}\n" +
+            "\t\titer_variable = iter_variable[index];\n" +
+            "\t}\n" +
+            "\treturn iter_variable;\n" +
+            "}\n\n",
                 true );
 
 
@@ -398,7 +428,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
                     // Variable is an array, so we must first define it as an empty object
                     if( !this.variables.get(varName) ){
-                        // Add variable definition
+                        // Add variable definition (As array)
                         this.variables.put(varName, true);
 
                         // Add variable definition
@@ -409,7 +439,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                     }
                     // We need to add array accessor to target code
-                    currentOutput += visit(arrayaccessor);
+                    currentOutput += getArrayAccessorsAsString(
+                            (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor)
+                    );
                 }
 
                 // After getting all nested indexes, lets process assignation
@@ -532,7 +564,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Visit if continuation
         // (which at this point has the same indentation level than original if)
-        currentOutput += visit(ctx.ifcontinuation());
+        if( ctx.ifcontinuation() != null && ctx.ifcontinuation().getChildCount() > 0 )
+            currentOutput += visit(ctx.ifcontinuation());
+        else
+            currentOutput += "\n";
 
         return (T)currentOutput;
     }
@@ -802,7 +837,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                     }
                     // We need to add array accessor to target code
-                    currentOutput += visit(arrayaccessor);
+                    currentOutput += getArrayAccessorsAsString(
+                            (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor)
+                    );
                 }
 
                 // After getting all nested indexes, lets process assignation
@@ -954,7 +991,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Check if there is an array accessor
             if( ctx.arrayaccessor() != null ){
-                currentOutput += visit(ctx.arrayaccessor());
+                currentOutput += getArrayAccessorsAsString(
+                        (LPGrammarParser.ExpressionContext[]) visit(ctx.arrayaccessor())
+                );
             }
         } else if( ctx.NUMBER() != null ){
             // Print number
@@ -979,24 +1018,30 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     @Override
     public T visitArrayaccessor(LPGrammarParser.ArrayaccessorContext ctx){
         // Print array accessor
-        String currentOutput = "";
+        // Will also print all neded checks for actual object existence
+        // Since Small Basic doesn't even care about types, you can write
+        // a["3"]["5"] ... without having declared a before
+        //
+        // variableName is the variable we are trying to access to
+        List<LPGrammarParser.ExpressionContext> expressions = new ArrayList<>();
+
         if( ctx.LBRACKET() != null ){
-            // Print array accessor
-            currentOutput += "[";
 
-            // Print expression
-            currentOutput += visit(ctx.expression());
-
-            // Print array accessor
-            currentOutput += "]";
+            // Get expression
+            expressions.add(ctx.expression());
 
             // Go further in accessors
             if( ctx.arrayaccessor() != null ){
-                currentOutput += visit(ctx.arrayaccessor());
+                expressions.addAll(
+                        Arrays.asList(
+                                (LPGrammarParser.ExpressionContext[]) visit(ctx.arrayaccessor()) )
+                );
             }
         }
 
-        return (T)currentOutput;
+        return (T) expressions.toArray(
+                new LPGrammarParser.ExpressionContext[expressions.size()]
+        );
     }
 
     @Override
@@ -1439,5 +1484,17 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         return "\t".repeat(this.indentationLevel) + line + (
             newLine ? "\n" : ""
             );
+    }
+    public String getArrayAccessorsAsString(LPGrammarParser.ExpressionContext[] accessors){
+        // Get accessors as string
+        String accessorsString = "";
+
+        for( LPGrammarParser.ExpressionContext accessor : accessors ){
+            accessorsString += "[";
+            accessorsString += visit(accessor);
+            accessorsString += "]";
+        }
+
+        return accessorsString;
     }
 }

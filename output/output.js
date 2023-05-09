@@ -133,6 +133,31 @@ function customPrint( text ) { TextWindow.innerHTML += text; }
 function customPrintLine( text ) { TextWindow.innerHTML += text + "<br>"; }
 function customClear( ) { TextWindow.innerHTML = ""; }
 
+// Utils for checking array elements existence
+function getValue( variable, indexes_sequence ) {
+	let iter_variable = variable;
+	for( let index of indexes_sequence ) { 
+		if( !Array.containsIndex( variable, index ) ) {
+			return undefined;
+		}
+		iter_variable = iter_variable[index];
+	}
+	return iter_variable;
+}
+
+// Generate objects before doing further actions, ie.e a[2]["3"]
+function checkValue( variable, indexes_sequence ) {
+	let iter_variable = variable;
+	for( let index of indexes_sequence ) { 
+		if( !Array.containsIndex( variable, index ) ) {
+			iter_variable[ index ] = {};
+		}
+		iter_variable = iter_variable[index];
+	}
+	return iter_variable;
+}
+
+
 /* End of utility functions and classes */
 
 /* Global variables */
@@ -166,7 +191,8 @@ Sub["ola"] = async () => 	// Function declaration
 				/* For body */
 				cosa = 3 * 2 <= 6;
 			}
-		}		// While declaration
+		}
+		// While declaration
 		while ( algo - 3 * 2 <= 6) {
 			/* While body */
 			algo = 3 * 2 <= 6;
@@ -189,7 +215,8 @@ Sub["ola"] = async () => 	// Function declaration
 				await Sub["ola"]();
 				count = Stack.popStack( "myarray" ) ;
 				customPrintLine( count );
-			}		}
+			}
+		}
 	}
 /* End of global functions definitions */
 
@@ -206,6 +233,8 @@ async function MAIN() {
 		/* Else body */
 		customPrintLine( "Adios" );
 	}
+	a = {};
+	a["3"][2][false][2 * 3 + 2] = a["3"][2];
 
 }
 // Create main div component for output

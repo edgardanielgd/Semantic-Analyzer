@@ -13,6 +13,7 @@ ifdeclaration : IF LPAREN expression RPAREN THEN statement ifcontinuation ENDIF
 
 ifcontinuation : ELSE statement
     | ELSEIF LPAREN expression RPAREN THEN statement ifcontinuation
+    | // Epsilon
     ;
 
 whiledeclaration : WHILE LPAREN expression RPAREN statement ENDWHILE
@@ -45,7 +46,6 @@ statementcomp : arrayaccessor EQUAL expression
     ;
 
 arrayaccessor : LBRACKET expression RBRACKET arrayaccessor
-    | EQUAL arrayaccessor
     | // Epsilon
     ;
 
