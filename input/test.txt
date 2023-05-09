@@ -33,6 +33,20 @@ EndSub
 a = 3
 b = 4
 c = 6
+d["3"] = 2
+e = Array.IsArray(d)
+TextWindow.WriteLine(e)
+TextWindow.WriteLine(d["3"])
+e = Array.GetItemCount(d)
+TextWindow.WriteLine(e)
+e = Array.GetKeys(d)
+TextWindow.WriteLine(e)
+e = Array.GetValue(d, "3")
+TextWindow.WriteLine(e)
+e = Array.GetValue(d, "4")
+TextWindow.WriteLine(e)
+e = Array.GetValue(d, "5")
+TextWindow.WriteLine(e)
 ' ola()
 Stack.PushValue("myarray", a)
 Stack.PushValue("myarray", b)

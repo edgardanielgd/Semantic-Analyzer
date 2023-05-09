@@ -66,6 +66,64 @@ class Stack {
 	}
 }
 
+// Useful class for simulating Small Basic's Array methods
+// In our context arrays are actually objects
+class Array {
+	// Check if an object is an array (Object actually)
+	static isArray(obj) {
+		return typeof obj === "object";
+	}
+
+	// Get the length of an array
+	static getLength(obj) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		return Object.keys(obj).length;
+	}
+
+	// Get the value of an array at a given index
+	static getValue(obj, index) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		return obj[index];
+	}
+
+	// Set the value of an array at a given index
+	static setValue(obj, index, value) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		obj[index] = value;
+	}
+
+	// Remove a value from the end of an array
+	static removeValue(obj) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		obj.pop();
+	}
+
+	// Check if array contains an element
+	static contains(obj, element) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		return obj.includes(element);
+	}
+
+	// Check if array contains a index
+	static containsIndex(obj, index) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		return obj[index] != undefined;
+	}
+
+	// Get all array's indexes
+	static getIndexes(obj) {
+		if( !Array.isArray(obj) )
+			return undefined;
+		return Object.keys(obj);
+	}
+}
+
 /* End of utility functions and classes */
 
 /* Global variables */
@@ -73,6 +131,8 @@ var a;
 var b;
 var c;
 var cosa;
+var d;
+var e;
 var count;
 var algo;
 /* End of global variables */
@@ -122,7 +182,6 @@ Sub["ola"] = async () => 	// Function declaration
 				}
 				await Sub["ola"]();
 				count = Stack.popStack("myarray");
-;
 				console.log(count);
 			}
 		}
@@ -134,11 +193,25 @@ async function MAIN() {
 	a = 3;
 	b = 4;
 	c = 6;
+	d = {};
+	d["3"] = 2;
+	e = 	Array.isArray(d);
+	console.log(e);
+	console.log(d["3"]);
+	e = 	Array.getLength(d);
+	console.log(e);
+	e = 	Array.getIndexes(d);
+	console.log(e);
+	e = 	Array.getValue(d, "3");
+	console.log(e);
+	e = 	Array.getValue(d, "4");
+	console.log(e);
+	e = 	Array.getValue(d, "5");
+	console.log(e);
 	Stack.pushStack("myarray", a);
 	Stack.pushStack("myarray", b);
 	Stack.pushStack("myarray", c);
 	count = Stack.popStack("myarray");
-;
 	console.log(count);
 	console.log("De mar");
 

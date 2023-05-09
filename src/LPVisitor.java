@@ -25,7 +25,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     //
     // Variables will be defined at start as
     // var <variable_name>;
-    HashSet<String> variables = new HashSet<>();
+    //
+    // Boolean related value indicates whether the variable is an array or not
+    HashMap<String, Boolean> variables = new HashMap<>();
 
     // Functions can even have the same name than some variables (in Small Basic)
     // so we must save them in another place D:, also they must be defined at code start
@@ -97,7 +99,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         "// Useful class for simulating Small Basic's Stacks\n" +
             "class Stack {\n" +
-
                 "\t// There will be some stack objects which must be saved\n" +
                 "\t// and registered on execution time\n" +
                 "\t// Each one will also be identified by its related name\n" +
@@ -151,9 +152,65 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 "\tgetSize() {\n" +
                     "\t\treturn this.size;\n" +
                 "\t}\n" +
-            "}\n",
-            true
-        );
+            "}\n\n" +
+            "// Useful class for simulating Small Basic's Array methods\n" +
+            "// In our context arrays are actually objects\n" +
+            "class Array {\n" +
+                "\t// Check if an object is an array (Object actually)\n" +
+                "\tstatic isArray(obj) {\n" +
+                    "\t\treturn typeof obj === \"object\";\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Get the length of an array\n" +
+                "\tstatic getLength(obj) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\treturn Object.keys(obj).length;\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Get the value of an array at a given index\n" +
+                "\tstatic getValue(obj, index) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\treturn obj[index];\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Set the value of an array at a given index\n" +
+                "\tstatic setValue(obj, index, value) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\tobj[index] = value;\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Remove a value from the end of an array\n" +
+                "\tstatic removeValue(obj) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\tobj.pop();\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Check if array contains an element\n" +
+                "\tstatic contains(obj, element) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\treturn obj.includes(element);\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Check if array contains a index\n" +
+                "\tstatic containsIndex(obj, index) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\treturn obj[index] != undefined;\n" +
+                "\t}\n" +
+                "\n" +
+                "\t// Get all array's indexes\n" +
+                "\tstatic getIndexes(obj) {\n" +
+                    "\t\tif( !Array.isArray(obj) )\n" +
+                        "\t\t\treturn undefined;\n" +
+                    "\t\treturn Object.keys(obj);\n" +
+                "\t}\n" +
+                "}\n",
+                true );
 
         utilities += getIndentedLine(
             "/* End of utility functions and classes */\n",
@@ -167,7 +224,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Place a block for defining all variables
         String variablesBlock = getIndentedLine( "/* Global variables */", true );
         
-        for( String key : this.variables.toArray( new String[this.variables.size()] ) ) {
+        for( String key : this.variables.keySet( ) ) {
             variablesBlock += getIndentedLine(
                 String.format(
                     "var %s;",
@@ -274,8 +331,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // If there is an identifier, then there are some cases to consider
         if( ctx.IDENTIFIER() != null ){
-            // Check if identifier is a variable
-            Boolean isDefined = this.variables.contains(ctx.IDENTIFIER().getText());
+
 
             // Get complement of statement
             LPGrammarParser.MainstatementscompContext statementcomp = ctx.mainstatementscomp();
@@ -286,7 +342,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String labelName = ctx.IDENTIFIER().getText();
 
                 // Check if label was already defined
-                isDefined = this.labels.contains(labelName);
+                Boolean isDefined = this.labels.contains(labelName);
 
                 if( !isDefined ) {
                     // Add label definition
@@ -313,22 +369,34 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String varName = ctx.IDENTIFIER().getText();
 
                 // Check if variable was already defined
-                isDefined = this.variables.contains(varName);
-
-                if( !isDefined ) {
-                    // Add variable definition
-                    this.variables.add(varName);
-                }
+                Boolean isDefined = this.variables.containsKey(varName);
 
                 // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
+
+                if( !isDefined ) {
+                    // Add variable definition
+                    this.variables.put(varName, false);
+                }
 
                 // Add variable name
                 currentOutput += getIndentedLine(
                         varName
                         , false);
 
-                if( arrayaccessor != null ){
+                if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
+                    // Variable is an array, so we must first define it as an empty object
+                    if( !this.variables.get(varName) ){
+                        // Add variable definition
+                        this.variables.put(varName, true);
+
+                        // Add variable definition
+                        currentOutput += " = {};\n";
+                        currentOutput += getIndentedLine(
+                                varName
+                                , false);
+
+                    }
                     // We need to add array accessor to target code
                     currentOutput += visit(arrayaccessor);
                 }
@@ -572,7 +640,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Check if variable is already defined, if not, define it locally in
         // target code
         String iteratorName = ctx.IDENTIFIER().getText();
-        Boolean isIterator = this.variables.contains(iteratorName);
+        Boolean isIterator = this.variables.containsKey(iteratorName);
 
         if( ! isIterator ){
             // Iterator variable hasn't been defined at this point, better to define it
@@ -653,8 +721,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         String currentOutput = "";
         if( ctx.IDENTIFIER() != null ){
-            // Check if identifier is a variable
-            Boolean isDefined = this.variables.contains(ctx.IDENTIFIER().getText());
+
 
             // Get complement of statement
             LPGrammarParser.StatementcompContext statementcomp = ctx.statementcomp();
@@ -665,7 +732,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String labelName = ctx.IDENTIFIER().getText();
 
                 // Check if label was already defined
-                isDefined = this.labels.contains(labelName);
+                Boolean isDefined = this.labels.contains(labelName);
 
                 if( !isDefined ) {
                     // Add label definition
@@ -680,7 +747,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
-                // Presented in the format:
+                // Presented in the form:
                 //
                 // Sub[<function name>]();
 
@@ -692,22 +759,34 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String varName = ctx.IDENTIFIER().getText();
 
                 // Check if variable was already defined
-                isDefined = this.variables.contains(varName);
-
-                if( !isDefined ) {
-                    // Add variable definition
-                    this.variables.add(varName);
-                }
-
-                // Print variable name as an start
-                currentOutput += getIndentedLine(
-                        varName
-                        , false);
+                Boolean isDefined = this.variables.containsKey(varName);
 
                 // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
 
-                if( arrayaccessor != null ){
+                if( !isDefined ) {
+                    // Add variable definition
+                    this.variables.put(varName, false);
+                }
+
+                // Add variable name
+                currentOutput += getIndentedLine(
+                        varName
+                        , false);
+
+                if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
+                    // Variable is an array, so we must first define it as an empty object
+                    if( !this.variables.get(varName) ){
+                        // Add variable definition
+                        this.variables.put(varName, true);
+
+                        // Add variable definition
+                        currentOutput += " = {};\n";
+                        currentOutput += getIndentedLine(
+                                varName
+                                , false);
+
+                    }
                     // We need to add array accessor to target code
                     currentOutput += visit(arrayaccessor);
                 }
@@ -999,6 +1078,19 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         );
                     }
                     break;
+                case "Clear":
+                    // Clear version in Javascript
+                    if( argumentsData.length == 0 ){
+                        currentOutput += getIndentedLine(
+                                "console.clear();", true
+                        );
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.Clear expects no arguments"
+                        );
+                    }
+                    break;
                 default:
                         System.err.println(
                             "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1052,7 +1144,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // by the entry Rule (S)
                         currentOutput += "Stack.popStack(";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ");\n";
+                        currentOutput += ")";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1070,11 +1162,153 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         } else if( specialCall.ARRAY() != null ){
 
             switch( methodName ){
-                case "GetCount":
+                case "IsArray":
+                    if( argumentsData.length == 1) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.isArray(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.IsArray expects one argument"
+                        );
+                    }
                     break;
-                case "PushValue":
+                case "GetItemCount":
+                    if( argumentsData.length == 1) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.getLength(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.GetItemCount expects one argument"
+                        );
+                    }
                     break;
-                case "PopValue":
+                case "GetKeys":
+                    if( argumentsData.length == 1) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.getIndexes(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.GetKeys expects one argument"
+                        );
+                    }
+                    break;
+                case "GetValue":
+                    if( argumentsData.length == 2) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.getValue(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.GetValue expects two arguments"
+                        );
+                    }
+                    break;
+                case "SetValue":
+                    if( argumentsData.length == 3) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.setValue(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[2]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.SetValue expects three arguments"
+                        );
+                    }
+                    break;
+                case "RemoveValue":
+                    if( argumentsData.length == 2) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.removeValue(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.RemoveValue expects two arguments"
+                        );
+                    }
+                    break;
+                case "ContainsIndex":
+                    if( argumentsData.length == 2) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.containsIndex(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.ContainsIndex expects two arguments"
+                        );
+                    }
+                    break;
+                case "ContainsValue":
+                    if( argumentsData.length == 2) {
+                        // Simulate a pushStack call
+                        // most of code is statically generated
+                        // by the entry Rule (S)
+                        currentOutput += getIndentedLine(
+                                "Array.contains(", false
+                        );
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += ", ";
+                        currentOutput += visit(argumentsData[1]);
+                        currentOutput += ")";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: Array.ContainsValue expects two arguments"
+                        );
+                    }
                     break;
                 default:
                     System.err.println(
