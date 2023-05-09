@@ -15,7 +15,7 @@ public class Main {
         if( args.length > 0 )
             srcFile = args[0];
 
-        String destFile = "output/output.txt";
+        String destFile = "output/output.js";
         if( args.length > 1 )
             destFile = args[1];
 

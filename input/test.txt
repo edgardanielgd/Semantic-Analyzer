@@ -22,6 +22,8 @@ Sub ola
                 Stack.PushValue("myarray", b)
             EndFor
 
+            ola()
+
             count = Stack.PopValue("myarray")
             TextWindow.WriteLine(count)
         EndIf
@@ -30,5 +32,12 @@ EndSub
 
 a = 3
 b = 4
-c = 5
-ola()
+c = 6
+' ola()
+Stack.PushValue("myarray", a)
+Stack.PushValue("myarray", b)
+Stack.PushValue("myarray", c)
+
+count = Stack.PopValue("myarray")
+TextWindow.WriteLine(count)
+TextWindow.WriteLine("De mar")

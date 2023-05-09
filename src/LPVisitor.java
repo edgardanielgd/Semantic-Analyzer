@@ -307,7 +307,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 currentOutput += getIndentedLine(
                         "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
-                        , false);
+                        , true);
             } else {
                 // This is an assignation case (Variable definition maybe)
                 String varName = ctx.IDENTIFIER().getText();
@@ -366,6 +366,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     functionName,
                     functionDeclaration
             );
+        }
+        else if( ctx.specialcall() != null ){
+            // This is a special call case
+            currentOutput += visit(ctx.specialcall());
         }
 
         // Process further statements
@@ -682,7 +686,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 currentOutput += getIndentedLine(
                         "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
-                        , false);
+                        , true);
             } else {
                 // This is an assignation case (Variable definition maybe)
                 String varName = ctx.IDENTIFIER().getText();
