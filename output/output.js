@@ -123,6 +123,15 @@ class Array {
 		return Object.keys(obj);
 	}
 }
+// Declaring TextWindow object, here we will display all of our outputs
+TextWindow = document.createElement("div");
+
+document.body.appendChild(TextWindow);
+
+// Useful elements for printing data into DOM Object
+function customPrint( text ) { TextWindow.innerHTML += text; }
+function customPrintLine( text ) { TextWindow.innerHTML += text + "<br>"; }
+function customClear( ) { TextWindow.innerHTML = ""; }
 
 /* End of utility functions and classes */
 
@@ -131,8 +140,6 @@ var a;
 var b;
 var c;
 var cosa;
-var d;
-var e;
 var count;
 var algo;
 /* End of global variables */
@@ -159,63 +166,49 @@ Sub["ola"] = async () => 	// Function declaration
 				/* For body */
 				cosa = 3 * 2 <= 6;
 			}
-		}
-		// While declaration
+		}		// While declaration
 		while ( algo - 3 * 2 <= 6) {
 			/* While body */
 			algo = 3 * 2 <= 6;
 			// If declaration
 			if ( casita && casita2 && casita3 && false) {
 				/* If body */
-				console.log("Hola");
-				await sleep(200);
+				customPrintLine( "Hola" );
+				await sleep( 200);
 				// For declaration
 				for ( let k = 2; k <= 5; k += 3) {
 					/* For body */
-					console.log("Hola");
-					await sleep(200);
+					customPrintLine( "Hola" );
+					await sleep( 200);
 				}
 				// For declaration
 				for ( let b = 2; b <= 10; b++) {
 					/* For body */
-					Stack.pushStack("myarray", b);
+					Stack.pushStack( "myarray" , b );
 				}
 				await Sub["ola"]();
-				count = Stack.popStack("myarray");
-				console.log(count);
-			}
-		}
+				count = Stack.popStack( "myarray" ) ;
+				customPrintLine( count );
+			}		}
 	}
 /* End of global functions definitions */
 
 // Main Function
 async function MAIN() {
-	a = 3;
-	b = 4;
-	c = 6;
-	d = {};
-	d["3"] = 2;
-	e = 	Array.isArray(d);
-	console.log(e);
-	console.log(d["3"]);
-	e = 	Array.getLength(d);
-	console.log(e);
-	e = 	Array.getIndexes(d);
-	console.log(e);
-	e = 	Array.getValue(d, "3");
-	console.log(e);
-	e = 	Array.getValue(d, "4");
-	console.log(e);
-	e = 	Array.getValue(d, "5");
-	console.log(e);
-	Stack.pushStack("myarray", a);
-	Stack.pushStack("myarray", b);
-	Stack.pushStack("myarray", c);
-	count = Stack.popStack("myarray");
-	console.log(count);
-	console.log("De mar");
+	a = prompt() * 1 ;
+	b = prompt() * 1 ;
+	c = a + b;
+	// If declaration
+	if ( c > 3) {
+		/* If body */
+		customPrintLine( "Hola" );
+	} else {
+		/* Else body */
+		customPrintLine( "Adios" );
+	}
 
 }
+// Create main div component for output
 
 MAIN();
 

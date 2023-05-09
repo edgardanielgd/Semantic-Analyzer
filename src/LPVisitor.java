@@ -46,11 +46,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Goto[<label_name>] = true;
     HashSet<String> labels = new HashSet<>();
 
-    // There is a special function on Small Basic called "Stack"
-    // we will simulate its use in the way its supposed to work in original language
-    // its just a set of Stacks identified by a string (key)
-    // Note its not an interpreter, so we will just save references and save them later
-    HashSet<String> stacks = new HashSet<>();
+    // Checking if current rule is supossed to be within a sentence and not a statement
+    // by itself (useful for special calls, which can be assigned or just called)
+    Boolean inAssignation = false;
+
+    // Utilities for "console" element inside custom HTML div
+    // Console logs and errors will be printed there
 
     @Override
     public T visitS(LPGrammarParser.SContext ctx) {
@@ -209,8 +210,16 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         "\t\t\treturn undefined;\n" +
                     "\t\treturn Object.keys(obj);\n" +
                 "\t}\n" +
-                "}\n",
+                "}\n" +
+            "// Declaring TextWindow object, here we will display all of our outputs\n" +
+            "TextWindow = document.createElement(\"div\");\n\n" +
+            "document.body.appendChild(TextWindow);\n\n" +
+            "// Useful elements for printing data into DOM Object\n" +
+            "function customPrint( text ) { TextWindow.innerHTML += text; }\n" +
+            "function customPrintLine( text ) { TextWindow.innerHTML += text + \"<br>\"; }\n" +
+            "function customClear( ) { TextWindow.innerHTML = \"\"; }\n",
                 true );
+
 
         utilities += getIndentedLine(
             "/* End of utility functions and classes */\n",
@@ -314,6 +323,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // use sentences like Delay, for example
         mainOutput = getIndentedLine("// Main Function\nasync function MAIN() {", true ) +
         getIndentedLine(mainOutput + "\n}", true ) +
+        getIndentedLine("// Create main div component for output", true) +
         getIndentedLine("\nMAIN();\n", true );
 
         currentOutput = currentOutput + mainOutput;
@@ -331,7 +341,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // If there is an identifier, then there are some cases to consider
         if( ctx.IDENTIFIER() != null ){
-
 
             // Get complement of statement
             LPGrammarParser.MainstatementscompContext statementcomp = ctx.mainstatementscomp();
@@ -365,6 +374,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
                         , true);
             } else {
+                inAssignation = true;
+
                 // This is an assignation case (Variable definition maybe)
                 String varName = ctx.IDENTIFIER().getText();
 
@@ -407,6 +418,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 // Get expression
                 currentOutput += visit(statementcomp.expression());
                 currentOutput += ";\n";
+
+                inAssignation = false;
             }
         }
         else if( ctx.ifdeclaration() != null ){
@@ -514,12 +527,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
 
+        // End if corpus
+        currentOutput += getIndentedLine("}", false);
+
         // Visit if continuation
         // (which at this point has the same indentation level than original if)
         currentOutput += visit(ctx.ifcontinuation());
-
-        // End if corpus
-        currentOutput += getIndentedLine("}", true);
 
         return (T)currentOutput;
     }
@@ -722,7 +735,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         String currentOutput = "";
         if( ctx.IDENTIFIER() != null ){
 
-
             // Get complement of statement
             LPGrammarParser.StatementcompContext statementcomp = ctx.statementcomp();
 
@@ -755,6 +767,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         "await Sub[\"" + ctx.IDENTIFIER().getText() + "\"]();"
                         , true);
             } else {
+                inAssignation = true;
+
                 // This is an assignation case (Variable definition maybe)
                 String varName = ctx.IDENTIFIER().getText();
 
@@ -797,6 +811,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 // Get expression
                 currentOutput += visit(statementcomp.expression());
                 currentOutput += ";\n";
+
+                inAssignation = false;
             }
         }
         else if( ctx.ifdeclaration() != null ){
@@ -1019,7 +1035,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         LPGrammarParser.ArgumentsContext arguments = ctx.arguments();
         LPGrammarParser.ExpressionContext[] argumentsData = null;
 
-        if( arguments != null ){
+        if( arguments != null){
             // Read provided arguments
             argumentsData = (LPGrammarParser.ExpressionContext[]) visit(arguments);
         } else {
@@ -1032,16 +1048,30 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             switch( methodName ){
                 case "WriteLine":
-                case "Write":
-                    // Print version in Javascript
-                    currentOutput += getIndentedLine(
-                            "console.log(", false
-                    );
+                    // Print with new line in Javascript (DOM Object actually)
+                    currentOutput +=
+                            "customPrintLine( ";
 
                     // This instructions expects only one argument
                     if( argumentsData.length == 1 ){
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ");\n";
+                        currentOutput += " )";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.WriteLine expects only one argument"
+                        );
+                    }
+                    break;
+                case "Write":
+                    // Print with new line in Javascript (DOM Object actually)
+                    currentOutput +=
+                            "customPrint( ";
+
+                    // This instructions expects only one argument
+                    if( argumentsData.length == 1 ){
+                        currentOutput += visit(argumentsData[0]);
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1051,11 +1081,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     break;
 
                 case "Read":
+                case "Pause":
                     // Read version in Javascript
                     if( argumentsData.length == 0 ){
-                        currentOutput += getIndentedLine(
-                                "prompt();", true
-                        );
+                        currentOutput += "prompt()";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1063,27 +1092,35 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         );
                     }
                     break;
-                case "Show":
-                    // Lets say this is an "Alert" equivalent in Javascript
-                    if( argumentsData.length == 1 ){
-                        currentOutput += getIndentedLine(
-                                "alert(", false
-                        );
-                        currentOutput += visit(argumentsData[0]);
-                        currentOutput += ");\n";
+
+                case "ReadNumber":
+                    // Read version in Javascript
+                    if( argumentsData.length == 0 ){
+                        currentOutput += "prompt() * 1";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
-                                        "Error: TextWindow.Show expects only one argument"
+                                        "Error: TextWindow.Read expects no arguments"
                         );
                     }
                     break;
+
+                case "Show":
+                    // Hide version in Javascript
+                    if( argumentsData.length == 0 ){
+                        currentOutput += "TextWindow.style.display = 'block'";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.Hide expects no arguments"
+                        );
+                    }
+                    break;
+
                 case "Clear":
                     // Clear version in Javascript
                     if( argumentsData.length == 0 ){
-                        currentOutput += getIndentedLine(
-                                "console.clear();", true
-                        );
+                        currentOutput += "customClear()";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1091,6 +1128,19 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         );
                     }
                     break;
+
+                case "Hide":
+                    // Hide version in Javascript
+                    if( argumentsData.length == 0 ){
+                        currentOutput += "TextWindow.style.display = 'none'";
+                    } else {
+                        System.err.println(
+                                "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
+                                        "Error: TextWindow.Hide expects no arguments"
+                        );
+                    }
+                    break;
+
                 default:
                         System.err.println(
                             "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1106,11 +1156,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Stack.getStackSize(", false
-                        );
+                        currentOutput += "Stack.getStackSize( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ");\n";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1123,13 +1171,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Stack.pushStack(", false
-                        );
+                        currentOutput += "Stack.pushStack( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ");\n";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1142,9 +1188,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += "Stack.popStack(";
+                        currentOutput += "Stack.popStack( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1167,11 +1213,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.isArray(", false
-                        );
+                        currentOutput += "Array.isArray( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1184,11 +1228,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.getLength(", false
-                        );
+                        currentOutput += "Array.getLength( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1201,11 +1243,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.getIndexes(", false
-                        );
+                        currentOutput += "Array.getIndexes( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1218,13 +1258,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.getValue(", false
-                        );
+                        currentOutput += "Array.getValue( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1237,15 +1275,13 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.setValue(", false
-                        );
+                        currentOutput += "Array.setValue( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[2]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1258,13 +1294,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.removeValue(", false
-                        );
+                        currentOutput += "Array.removeValue( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1277,13 +1311,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.containsIndex(", false
-                        );
+                        currentOutput += "Array.containsIndex( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1296,13 +1328,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         // Simulate a pushStack call
                         // most of code is statically generated
                         // by the entry Rule (S)
-                        currentOutput += getIndentedLine(
-                                "Array.contains(", false
-                        );
+                        currentOutput += "Array.contains( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ", ";
+                        currentOutput += " , ";
                         currentOutput += visit(argumentsData[1]);
-                        currentOutput += ")";
+                        currentOutput += " )";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1324,12 +1354,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 case "Delay":
                     // Recall we are inside an async function always
                     if( argumentsData.length == 1){
-                        currentOutput += getIndentedLine(
-                                "await sleep(",
-                                false
-                        );
+                        currentOutput += "await sleep( ";
                         currentOutput += visit(argumentsData[0]);
-                        currentOutput += ");\n";
+                        currentOutput += ")";
                     } else {
                         System.err.println(
                                 "[" + specialCall.getStart().getLine() + ":" + specialCall.getStart().getCharPositionInLine() + "] " +
@@ -1341,16 +1368,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 case "Pause":
                     // Actually does the same compared with the source code
-                    currentOutput += getIndentedLine(
-                            "debugger;", true
-                    );
+                    currentOutput += "debugger";
                     break;
 
                 case "End":
                     // Ends the program (we have to do it with an exception)
-                    currentOutput += getIndentedLine(
-                            "throw 'Program ended';", true
-                    );
+                    currentOutput += "throw 'Program ended'";
                     break;
 
                 default:
@@ -1360,6 +1383,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     );
             }
 
+        }
+
+        if( inAssignation ){
+            // We are in an assignation
+            // so we have to add a comma
+            currentOutput += " ";
+        } else {
+            // We are not in an assignation
+            // so we have to add a semicolon and add a line
+            currentOutput = getIndentedLine(
+                    currentOutput + ";", true
+            );
         }
 
         return (T)currentOutput;
@@ -1373,8 +1408,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Array result (will be parsed to array later)
         List<LPGrammarParser.ExpressionContext> argumentsData = new ArrayList<>();
 
-        if( ctx.optionalarg() != null ){
+        if( ctx.optionalarg() != null && ctx.optionalarg().getChildCount() > 0){
             // A real expression argument was written
+            System.out.println("Argument: " + ctx.optionalarg().expression().getText());
             argumentsData.add(ctx.optionalarg().expression());
         }
 
