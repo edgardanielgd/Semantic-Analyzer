@@ -1,5 +1,3 @@
-package src;
-
 import java.io.*;
 
 import org.antlr.v4.runtime.*;
@@ -21,6 +19,11 @@ public class Main {
 
         // Common class definition
         LPGrammarLexer lexer = new LPGrammarLexer(
+            /*CharStreams.fromReader(
+                new BufferedReader(
+                    new InputStreamReader(System.in)
+                )
+            )*/
             CharStreams.fromFileName(srcFile)
         );
         CommonTokenStream tokens = new CommonTokenStream(
@@ -39,8 +42,8 @@ public class Main {
         // a translation from Small Basic to Javascript
 
         String output = (String)visitor.visit(tree);
-        File outputFile = new File(destFile);
-        FileOutputStream writer = new FileOutputStream(outputFile);
+        // System.out.println(output);
+        FileOutputStream writer = new FileOutputStream(destFile);
         writer.write(output.getBytes());
     }
 }

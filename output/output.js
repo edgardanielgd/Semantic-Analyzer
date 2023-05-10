@@ -9,6 +9,7 @@
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 // Useful class for simulating Small Basic's Stacks
 class Stack {
 	// There will be some stack objects which must be saved
@@ -134,7 +135,7 @@ function customPrintLine( text ) { TextWindow.innerHTML += text + "<br>"; }
 function customClear( ) { TextWindow.innerHTML = ""; }
 
 // Utils for checking array elements existence
-function getValue( variable, indexes_sequence ) {
+function getArrayValue( indexes_sequence, variable,  ) {
 	let iter_variable = variable;
 	for( let index of indexes_sequence ) { 
 		if( !Array.containsIndex( variable, index ) ) {
@@ -145,16 +146,26 @@ function getValue( variable, indexes_sequence ) {
 	return iter_variable;
 }
 
-// Generate objects before doing further actions, ie.e a[2]["3"]
-function checkValue( variable, indexes_sequence ) {
-	let iter_variable = variable;
-	for( let index of indexes_sequence ) { 
-		if( !Array.containsIndex( variable, index ) ) {
-			iter_variable[ index ] = {};
+function assignateArray( indexes_sequence, origin, value ){
+	// indexes, array of indexes to assign
+	// origin, target variable actualy, we will check its state
+	// value, value to be assigned to origin[index1]...[indexn]
+
+	let o = {};
+	// Make a deep copy of a
+	if( typeof a === "object" ) o = JSON.parse( JSON.stringify( a ) );
+
+	let iterator = o;
+	let lastIndex = indexes_sequence[ indexes_sequence.length - 1 ];
+	for( index of indexes_sequence ){
+		if( index == lastIndex ) {
+			iterator[ index ] = value;
+		} else if ( ! ( index in iterator ) ) {
+			iterator[ index ] = {};
 		}
-		iter_variable = iter_variable[index];
+		iterator = iterator[ index ];
 	}
-	return iter_variable;
+	return o;
 }
 
 
@@ -163,9 +174,15 @@ function checkValue( variable, indexes_sequence ) {
 /* Global variables */
 var a;
 var b;
+var olademar;
 var c;
 var cosa;
+var casita2;
+var casita3;
 var count;
+var x;
+var False;
+var casita;
 var algo;
 /* End of global variables */
 
@@ -233,8 +250,10 @@ async function MAIN() {
 		/* Else body */
 		customPrintLine( "Adios" );
 	}
-	a = {};
-	a["3"][2][false][2 * 3 + 2] = a["3"][2];
+	a = 2;
+	b = 50 * getArrayValue([3, 2, 1, ], x);
+	customPrintLine( b );
+	a = assignateArray(["3", 2, False, 2 * 3 + 2, ], a, getArrayValue(["3", 2, ], a));
 
 }
 // Create main div component for output

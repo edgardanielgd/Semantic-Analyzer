@@ -208,7 +208,7 @@ FALSE : '"' F A L S E '"';
 // SPECIAL TOKENS
 IDENTIFIER : [a-zA-Z][_a-zA-Z0-9]*;
 NUMBER : [0-9]+('.'([0-9]*))?; // A single point is allowed
-TEXT : '"' .*? '"';
+TEXT : '"' ( '\\' . | ~('\\'|'"') )* '"';
 COMMENT: '\'' .*? '\n' -> skip; // Single line comments
 
 // FRAGMENTS FOR CASE INSENSITIVITY

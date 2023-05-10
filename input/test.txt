@@ -39,4 +39,24 @@ Else
     TextWindow.WriteLine("Adios")
 EndIf
 
-a["3"][2][false][2*3+2] = a["3"][2]
+a = 2
+b = 50 * x[3][2][1]
+TextWindow.WriteLine( b )
+a["3"][2][False][2*3+2] = a["3"][2]
+
+' My Crazy code
+Goto a
+
+If (casita = 2) Then
+    TextWindow.WriteLine("Hola")
+Else
+    TextWindow.WriteLine("Adios")
+ENdIf
+
+For i = 2 To 4 Step 2
+    TextWindow.WriteLine("Hola")
+    Program.Delay(200)
+EndFor
+
+a:
+TextWindow.WriteLine("Wassup")

@@ -4,6 +4,7 @@ import java.util.*;
 
 import gen.*;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import src.CommonTypes;
 
 public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
@@ -27,7 +28,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // var <variable_name>;
     //
     // Boolean related value indicates whether the variable is an array or not
-    HashMap<String, Boolean> variables = new HashMap<>();
+    HashSet<String> variables = new HashSet<>();
 
     // Functions can even have the same name than some variables (in Small Basic)
     // so we must save them in another place D:, also they must be defined at code start
@@ -67,7 +68,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // and append the result to the output string
         //
         // Print a cool code header
-        System.out.println("Generating code...");
+
 
         // Helps with declaring statements in a custom order
         String currentOutput = "";
@@ -99,7 +100,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         );
         this.indentationLevel--;
         utilities += getIndentedLine(
-            "}",
+            "}\n",
             true
         );
 
@@ -227,7 +228,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             "function customPrintLine( text ) { TextWindow.innerHTML += text + \"<br>\"; }\n" +
             "function customClear( ) { TextWindow.innerHTML = \"\"; }\n\n" +
             "// Utils for checking array elements existence\n" +
-            "function getValue( variable, indexes_sequence ) {\n" +
+            "function getArrayValue( indexes_sequence, variable,  ) {\n" +
             "\tlet iter_variable = variable;\n" +
             "\tfor( let index of indexes_sequence ) { \n" +
             "\t\tif( !Array.containsIndex( variable, index ) ) {\n" +
@@ -237,16 +238,24 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             "\t}\n" +
             "\treturn iter_variable;\n" +
             "}\n\n" +
-            "// Generate objects before doing further actions, ie.e a[2][\"3\"]\n" +
-            "function checkValue( variable, indexes_sequence ) {\n" +
-            "\tlet iter_variable = variable;\n" +
-            "\tfor( let index of indexes_sequence ) { \n" +
-            "\t\tif( !Array.containsIndex( variable, index ) ) {\n" +
-            "\t\t\titer_variable[ index ] = {};\n" +
-            "\t\t}\n" +
-            "\t\titer_variable = iter_variable[index];\n" +
+            "function assignateArray( indexes_sequence, origin, value ){\n" +
+            "\t// indexes, array of indexes to assign\n" +
+            "\t// origin, target variable actualy, we will check its state\n" +
+            "\t// value, value to be assigned to origin[index1]...[indexn]\n\n" +
+            "\tlet o = {};\n" +
+            "\t// Make a deep copy of a\n" +
+            "\tif( typeof a === \"object\" ) o = JSON.parse( JSON.stringify( a ) );\n\n" +
+            "\tlet iterator = o;\n" +
+            "\tlet lastIndex = indexes_sequence[ indexes_sequence.length - 1 ];\n" +
+            "\tfor( index of indexes_sequence ){\n" +
+                "\t\tif( index == lastIndex ) {\n" +
+                    "\t\t\titerator[ index ] = value;\n" +
+                "\t\t} else if ( ! ( index in iterator ) ) {\n" +
+                    "\t\t\titerator[ index ] = {};\n" +
+                "\t\t}\n" +
+                "\t\titerator = iterator[ index ];\n" +
             "\t}\n" +
-            "\treturn iter_variable;\n" +
+            "\treturn o;\n" +
             "}\n\n",
                 true );
 
@@ -263,7 +272,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Place a block for defining all variables
         String variablesBlock = getIndentedLine( "/* Global variables */", true );
         
-        for( String key : this.variables.keySet( ) ) {
+        for( String key : this.variables.toArray(
+            new String[ this.variables.size() ]
+        ) ) {
             variablesBlock += getIndentedLine(
                 String.format(
                     "var %s;",
@@ -410,14 +421,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String varName = ctx.IDENTIFIER().getText();
 
                 // Check if variable was already defined
-                Boolean isDefined = this.variables.containsKey(varName);
+                Boolean isDefined = this.variables.contains(varName);
 
                 // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
 
                 if( !isDefined ) {
                     // Add variable definition
-                    this.variables.put(varName, false);
+                    this.variables.add(varName);
                 }
 
                 // Add variable name
@@ -425,46 +436,53 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                         varName
                         , false);
 
-                if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
-                    // Variable is an array, so we must first define it as an empty object
-                    if( !this.variables.get(varName) ){
-                        // Add variable definition (As array)
-                        this.variables.put(varName, true);
-
-                        // Add variable definition
-                        currentOutput += " = {};\n";
-                        currentOutput += getIndentedLine(
-                                varName
-                                , false);
-
-                    }
-                    // We need to add array accessor to target code
-                    currentOutput += getArrayAccessorsAsString(
-                            (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor)
-                    );
-                }
-
-                // After getting all nested indexes, lets process assignation
+                // Since indexes could not exist yet, then we must use an Util function
+                // for checking their existence (create new objects if they do not exist)
+                // and then adding needed value
                 currentOutput += " = ";
 
-                // Get expression
-                currentOutput += visit(statementcomp.expression());
+                if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
+                    // Variable is an array, so we must first define it as an empty object
+                    // Get all expressions for array indexes (as arrays)
+                    LPGrammarParser.ExpressionContext expressions[] = (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor);
+
+                    // In this case, we must call assignateArray function
+                    // This function (which is defined statically at code's start) will
+                    // create an object and all nested subobjects needed for accessing
+                    // the array index successfully (just as Small Basic does)
+                    currentOutput += "assignateArray(";
+
+                    // First parameter is an array of built expressions
+                    // Recall all of them are evaluated by javascript
+                    currentOutput += expressionArrayAsString(expressions);
+
+                    // Second parameter is the target variable to be assignated
+                    currentOutput += ", ";
+
+                    // Add variable name
+                    currentOutput += varName;
+
+                    // Third parameter is the value to be assignated (Another expression)
+                    currentOutput += ", ";
+
+                    // Get expression
+                    currentOutput += visit(statementcomp.expression());
+
+                    // Close function call
+                    currentOutput += ")";
+
+                } else {
+                    // Assign an expression as usual
+
+                    // Get expression
+                    currentOutput += visit(statementcomp.expression());
+                }
+                // Recall built-in functions won't print a semicolon at the end
+                // in case we set inAssignation to true
                 currentOutput += ";\n";
 
                 inAssignation = false;
             }
-        }
-        else if( ctx.ifdeclaration() != null ){
-            // This is an if declaration case
-            currentOutput += visit(ctx.ifdeclaration());
-        }
-        else if( ctx.whiledeclaration() != null ){
-            // This is a while declaration case
-            currentOutput += visit(ctx.whiledeclaration());
-        }
-        else if( ctx.fordeclaration() != null ){
-            // This is a for declaration case
-            currentOutput += visit(ctx.fordeclaration());
         }
         else if( ctx.functiondeclaration() != null ){
             // This is a function declaration case
@@ -480,9 +498,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     functionDeclaration
             );
         }
-        else if( ctx.specialcall() != null ){
-            // This is a special call case
-            currentOutput += visit(ctx.specialcall());
+        else {
+            // Mainstatements and common statements would repeat some lines of code
+            currentOutput = getStatementExtension(
+                    ctx.ifdeclaration(),
+                    ctx.whiledeclaration(),
+                    ctx.fordeclaration(),
+                    ctx.specialcall()
+            );
         }
 
         // Process further statements
@@ -502,7 +525,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         String currentOutput = "";
 
-        System.out.println("Reading a function declaration...");
+
         currentOutput += getIndentedLine("// Function declaration", true) +
                 getIndentedLine(String.format(
                         "{",
@@ -533,7 +556,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // if( <condition> ) { <body> }
         // indentation level will be considered
         String currentOutput = "";
-        System.out.println("Reading if declaration...");
+
         currentOutput += getIndentedLine("// If declaration", true) +
                 getIndentedLine(
                         "if ( "
@@ -579,7 +602,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // 2. ElseIf, read another conditional
         // 3. Else, final block of conditional
         // Note for this point a new line hasn't been printed yet
-        System.out.println("Translates if continuation....");
+
         String currentOutput = "";
         if( ctx.ELSE() != null ){
             // This the "else statement endif" case
@@ -638,7 +661,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Resulting code will be defined as:
         // while( <condition> ) { <body> }
         // indentation level will be considered
-        System.out.println("Reading while declaration...");
+
         String currentOutput = "";
 
         currentOutput += getIndentedLine("// While declaration", true) +
@@ -678,7 +701,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Resulting code will be defined as:
         // for( <assignment> ; <condition> ; <assignment> ) { <body> }
         // indentation level will be considered
-        System.out.println("Reading for declaration...");
+
         String currentOutput = "";
         currentOutput += getIndentedLine("// For declaration", true) +
                 getIndentedLine(
@@ -688,7 +711,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Check if variable is already defined, if not, define it locally in
         // target code
         String iteratorName = ctx.IDENTIFIER().getText();
-        Boolean isIterator = this.variables.containsKey(iteratorName);
+        Boolean isIterator = this.variables.contains(iteratorName);
 
         if( ! isIterator ){
             // Iterator variable hasn't been defined at this point, better to define it
@@ -808,14 +831,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 String varName = ctx.IDENTIFIER().getText();
 
                 // Check if variable was already defined
-                Boolean isDefined = this.variables.containsKey(varName);
+                Boolean isDefined = this.variables.contains(varName);
 
                 // Since it is an assignation case
                 LPGrammarParser.ArrayaccessorContext arrayaccessor = statementcomp.arrayaccessor();
 
                 if( !isDefined ) {
                     // Add variable definition
-                    this.variables.put(varName, false);
+                    this.variables.add(varName);
                 }
 
                 // Add variable name
@@ -825,9 +848,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
                     // Variable is an array, so we must first define it as an empty object
-                    if( !this.variables.get(varName) ){
+                    if( !this.variables.contains(varName) ){
                         // Add variable definition
-                        this.variables.put(varName, true);
+                        this.variables.add(varName);
 
                         // Add variable definition
                         currentOutput += " = {};\n";
@@ -852,21 +875,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 inAssignation = false;
             }
         }
-        else if( ctx.ifdeclaration() != null ){
-            // This is an if declaration case
-            currentOutput += visit(ctx.ifdeclaration());
-        }
-        else if( ctx.whiledeclaration() != null ){
-            // This is a while declaration case
-            currentOutput += visit(ctx.whiledeclaration());
-        }
-        else if( ctx.fordeclaration() != null ){
-            // This is a for declaration case
-            currentOutput += visit(ctx.fordeclaration());
-        }
-        else if( ctx.specialcall() != null ){
-            // This is a special call case
-            currentOutput += visit(ctx.specialcall());
+        else {
+            // Mainstatements and common statements would repeat some lines of code
+            currentOutput = getStatementExtension(
+                    ctx.ifdeclaration(),
+                    ctx.whiledeclaration(),
+                    ctx.fordeclaration(),
+                    ctx.specialcall()
+            );
         }
 
         if( ctx.statement() != null ){
@@ -986,14 +1002,33 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Get subexpression
         String currentOutput = "";
         if( ctx.IDENTIFIER() != null ){
-            // Print variable name
-            currentOutput += ctx.IDENTIFIER().getText();
+            // We should check if this variable does exist, if not, also add it as
+            // a global variable
+            String varName = ctx.IDENTIFIER().getText();
+            if( !this.variables.contains(varName) ){
+                // Add variable definition
+                this.variables.add(varName);
+            }
 
             // Check if there is an array accessor
-            if( ctx.arrayaccessor() != null ){
-                currentOutput += getArrayAccessorsAsString(
+            if( ctx.arrayaccessor() != null && ctx.arrayaccessor().getChildCount() > 0){
+                // Array's keys would not exist, so we created
+                // a util function which will make sure to prevent our parsed
+                // code from throwing an error and instead just return null (undefined)
+                currentOutput += "getArrayValue(";
+
+                // First parameter is the array of indexes to be accessed
+                currentOutput += expressionArrayAsString(
                         (LPGrammarParser.ExpressionContext[]) visit(ctx.arrayaccessor())
                 );
+                currentOutput += ", ";
+
+                // Second parameter is the array name (Which could match a variable name)
+                currentOutput += ctx.IDENTIFIER().getText();
+                currentOutput += ")";
+            } else {
+                // Print variable name (its not an array so we don't care about its existence)
+                currentOutput += ctx.IDENTIFIER().getText();
             }
         } else if( ctx.NUMBER() != null ){
             // Print number
@@ -1063,13 +1098,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     @Override
     public T visitComparator(LPGrammarParser.ComparatorContext ctx){
         // Print operator
-        return (T) (" " + ctx.getText() + " ");
+        String comparatorText = ( ctx.EQUAL() != null ) ? "==" : ctx.getText();
+        return (T) (" " + comparatorText + " ");
     }
 
     @Override
     public T visitSpecialcall(LPGrammarParser.SpecialcallContext ctx){
 
-        System.out.println("Passes through special call");
+
         String currentOutput = "";
 
         // Print function call (There is a well known number of special calls)
@@ -1455,7 +1491,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         if( ctx.optionalarg() != null && ctx.optionalarg().getChildCount() > 0){
             // A real expression argument was written
-            System.out.println("Argument: " + ctx.optionalarg().expression().getText());
+
             argumentsData.add(ctx.optionalarg().expression());
         }
 
@@ -1497,4 +1533,45 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         return accessorsString;
     }
+    public String getStatementExtension(
+            LPGrammarParser.IfdeclarationContext ifdeclaration,
+            LPGrammarParser.WhiledeclarationContext whiledeclaration,
+            LPGrammarParser.FordeclarationContext fordeclaration,
+            LPGrammarParser.SpecialcallContext specialcall
+    ){
+        String currentOutput = "";
+
+        if( ifdeclaration != null ){
+            // This is an if declaration case
+            currentOutput += visit(ifdeclaration);
+        }
+        else if( whiledeclaration != null ){
+            // This is a while declaration case
+            currentOutput += visit(whiledeclaration);
+        }
+        else if( fordeclaration != null ){
+            // This is a for declaration case
+            currentOutput += visit(fordeclaration);
+        }
+        else if( specialcall != null ){
+            // This is a special call case
+            currentOutput += visit(specialcall);
+        }
+
+        return currentOutput;
+    }
+
+    public String expressionArrayAsString(
+            LPGrammarParser.ExpressionContext[] expressions
+    ){
+        String currentOutput = "[";
+
+        for( LPGrammarParser.ExpressionContext expression : expressions ){
+            currentOutput += visit(expression);
+            currentOutput += ", ";
+        }
+
+        return currentOutput + "]";
+    }
+
 }
