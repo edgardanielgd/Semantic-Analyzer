@@ -2,7 +2,7 @@ package src;
 
 import java.util.*;
 
-import gen.*;
+import src.gen.*;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import src.CommonTypes;
@@ -62,29 +62,44 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Saving current label name (if any) and its related sentences
     Boolean labelMode = false;
 
+    // Custom visitor for labels lookup
+    LabelDefinitionVisitor labelVisitor = new LabelDefinitionVisitor();
+
     // Utilities for "console" element inside custom HTML div
     // Console logs and errors will be printed there
-
     @Override
     public T visitS(LPGrammarParser.SContext ctx) {
         // We will visit each of the children of the root node
         // and append the result to the output string
         //
         // Print a cool code header
-
-
+        //
         // Helps with declaring statements in a custom order
         String currentOutput = "";
         String mainOutput = "";
 
+        // Finally append actual code
+        // However, lets embed all inside an async function, so we will be able to
+        // use sentences like Delay, for example
         this.indentationLevel++;
         if( ctx.mainstatement() != null ){
-            mainOutput += (String)visit(ctx.mainstatement());
+            // Here joins the fun part
+            // Read labels for declared anywhere on this block
+            ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.mainstatement());
+
+            mainOutput +=
+                    labelVisitor.getLabelsStartCode(
+                            labels, this
+                    ) +
+                    visit(ctx.mainstatement()) +
+                    labelVisitor.getLabelEndCode(
+                            labels, this
+                    );
         }
         this.indentationLevel--;
 
         // We will need some extra util functions at start
-
+        // System.out.println(indentationLevel);
         currentOutput += getIndentedLine(
             "/* Utility Functions and Classes */",
             true
@@ -268,27 +283,58 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             true
         );
 
-
         currentOutput += utilities;
 
         // All variables must be global
         // Place a block for defining all variables
         String variablesBlock = getIndentedLine( "/* Global variables */", true );
-        
+
+        variablesBlock += "var Variables = {\n";
+        this.indentationLevel++;
+
         for( String key : this.variables.toArray(
             new String[ this.variables.size() ]
         ) ) {
+
             variablesBlock += getIndentedLine(
                 String.format(
-                    "var %s;",
+                    "%s : undefined,",
                     key
                 ), true
             );
         }
 
+        this.indentationLevel--;
+        variablesBlock += getIndentedLine( "};\n", true );
+
         // Add the variables block to the output
         currentOutput += variablesBlock +
                 getIndentedLine("/* End of global variables */\n", true);
+
+        // All labels utilities are defined above all code as well
+        String labelsBlock = getIndentedLine( "/* Labels */", true );
+
+        labelsBlock += "var Labels = {\n";
+        this.indentationLevel++;
+
+        for( String key : this.labels.toArray(
+                new String[ this.labels.size() ]
+        ) ) {
+
+            labelsBlock += getIndentedLine(
+                    String.format(
+                            "%s : false,",
+                            key
+                    ), true
+            );
+        }
+
+        this.indentationLevel--;
+        labelsBlock += getIndentedLine( "};\n", true );
+
+        // Add the labels block to the output
+        currentOutput += labelsBlock +
+                getIndentedLine("/* End of labels */\n", true);
 
         // Also all functions are global, lets define some
         // prototypes in case they are used before definition
@@ -362,9 +408,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 getIndentedLine("// Edgar Daniel Gonzalez Diaz\n", true) +
                 currentOutput;
 
-        // Finally append actual code
-        // However, lets embed all inside an async function, so we will be able to
-        // use sentences like Delay, for example
         mainOutput = getIndentedLine("// Main Function\nasync function MAIN() {", true ) +
         getIndentedLine(mainOutput + "\n}", true ) +
         getIndentedLine("// Create main div component for output", true) +
@@ -401,9 +444,15 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     this.labels.add(labelName);
                 }
 
+                // Recall we have opened an if block for this label
+                // so lets close this thing!
                 currentOutput += getIndentedLine(
-                        "//" + labelName + ":" + " labels are not supported in Javascript"
+                        "}\n"
                         , true);
+
+                // Since we were inside a label block, reduce indentation level
+                this.indentationLevel--;
+
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
                 // Presented in the form:
@@ -432,7 +481,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 // Add variable name
                 currentOutput += getIndentedLine(
-                        varName
+                        "Variables[ \"" + varName + "\" ]"
                         , false);
 
                 // Since indexes could not exist yet, then we must use an Util function
@@ -503,14 +552,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     ctx.ifdeclaration(),
                     ctx.whiledeclaration(),
                     ctx.fordeclaration(),
-                    ctx.specialcall()
+                    ctx.specialcall(),
+                    ctx.labelcall()
             );
-
-            if (ctx.labelcall() != null) {
-                currentOutput += getIndentedLine(
-                        "//"+ ctx.labelcall().GOTO().getText() + " " + ctx.labelcall().IDENTIFIER().getText() + ":" + " goto calls are not supported in Javascript"
-                        , true);
-            }
         }
 
         // Process further statements
@@ -530,7 +574,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         String currentOutput = "";
 
-
         currentOutput += getIndentedLine("// Function declaration", true) +
                 getIndentedLine(String.format(
                         "{",
@@ -544,7 +587,16 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Visit statements block only if there is any
         if( ctx.statement() != null ) {
-            currentOutput += visit(ctx.statement());
+            ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.statement());
+
+            currentOutput +=
+                    labelVisitor.getLabelsStartCode(
+                            labels, this
+                    ) +
+                    visit(ctx.statement()) +
+                    labelVisitor.getLabelEndCode(
+                            labels, this
+                    );
         }
 
         // Reverse indentation level added before starting function body
@@ -581,8 +633,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         );
 
         // Print related statement data indented
-        if(ctx.statement() != null)
-            currentOutput += visit(ctx.statement());
+        if(ctx.statement() != null) {
+            ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.statement());
+
+            currentOutput +=
+                    labelVisitor.getLabelsStartCode(
+                            labels, this
+                    ) +
+                    visit(ctx.statement()) +
+                    labelVisitor.getLabelEndCode(
+                            labels, this
+                    );
+        }
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
@@ -619,8 +681,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     "/* Else body */", true
             );
 
-            if(ctx.statement() != null)
-                currentOutput += visit(ctx.statement());
+            if(ctx.statement() != null) {
+                ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.statement());
+
+                currentOutput +=
+                        labelVisitor.getLabelsStartCode(
+                                labels, this
+                        ) +
+                        visit(ctx.statement()) +
+                        labelVisitor.getLabelEndCode(
+                                labels, this
+                        );
+            }
 
             // Rollback indentation since else is finished
             this.indentationLevel--;
@@ -643,8 +715,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     "/* Else if body */", true
             );
 
-            if(ctx.statement() != null)
-                currentOutput += visit(ctx.statement());
+            if(ctx.statement() != null) {
+                ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.statement());
+
+                currentOutput +=
+                        labelVisitor.getLabelsStartCode(
+                                labels, this
+                        ) +
+                        visit(ctx.statement()) +
+                        labelVisitor.getLabelEndCode(
+                                labels, this
+                        );
+            }
 
             // Rollback indentation since else if is finished
             this.indentationLevel--;
@@ -654,7 +736,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
             // Visit if continuation
             // (which at this point has the same indentation level than original if)
-            currentOutput += visit(ctx.ifcontinuation());
+            if( ctx.ifcontinuation() != null && ctx.ifcontinuation().getChildCount() > 0 )
+                currentOutput += visit(ctx.ifcontinuation());
+            else
+                currentOutput += "\n";
         }
 
         return (T)currentOutput;
@@ -688,8 +773,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         );
 
         // Print related statement data indented
-        if(ctx.statement() != null)
-            currentOutput += visit(ctx.statement());
+        if(ctx.statement() != null) {
+            ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(ctx.statement());
+
+            currentOutput +=
+                    labelVisitor.getLabelsStartCode(
+                            labels, this
+                    ) +
+                    visit(ctx.statement()) +
+                    labelVisitor.getLabelEndCode(
+                            labels, this
+                    );
+        }
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
@@ -722,12 +817,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             // Iterator variable hasn't been defined at this point, better to define it
             // locally in target code
             currentOutput += "let ";
+            currentOutput += iteratorName + " = ";
+        } else {
+            // Its a global variable
+            currentOutput += "Variables[ \"" + iteratorName + "\" ] = ";
         }
 
-        currentOutput += iteratorName + " = ";
-
-        // TODO: Check iterator is an integer variable (not even neccessary)
-        // How the heck to do that?
         //
         // Generate first expression value (first assignation for iterator)
         currentOutput += visit(ctx.expression(0));
@@ -736,10 +831,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
         // Now generate stop condition, it will always have the form:
         // <iterator> <= <expression>
-        currentOutput += iteratorName + " <= ";
+        if( ! isIterator )
+            currentOutput += iteratorName + " <= ";
+        else
+            currentOutput += "Variables[ \"" + iteratorName + "\" ] <= ";
 
-        // TODO: Check again if iterator is an integer variable
-        // How the heck to do that? x2
         currentOutput += visit(ctx.expression(1));
 
         currentOutput += "; "; // No indent needed
@@ -747,7 +843,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Now, check if there is a STEP keyword or we can deduce its just + 1
         // This will be handled by next rule: fordeclarationcomp
 
-        currentOutput += iteratorName;
+        if( ! isIterator )
+            currentOutput += iteratorName;
+        else
+            currentOutput += "Variables[ \"" + iteratorName + "\" ]";
 
         // Get following fordeclarationcomp context (would include both step or direct statements block)
         LPGrammarParser.FordeclarationcompContext forcomp = ctx.fordeclarationcomp();
@@ -776,8 +875,18 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         );
 
         // Print related statement data indented
-        if(forcomp.statement() != null)
-            currentOutput += visit(forcomp.statement());
+        if(forcomp.statement() != null) {
+            ArrayList<String> labels = (ArrayList<String>) labelVisitor.visit(forcomp.statement());
+
+            currentOutput +=
+                    labelVisitor.getLabelsStartCode(
+                            labels, this
+                    ) +
+                    visit(forcomp.statement()) +
+                    labelVisitor.getLabelEndCode(
+                            labels, this
+                    );
+        }
 
         // Decrease indentation since embeded code has already been parsed
         this.indentationLevel--;
@@ -814,9 +923,14 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     this.labels.add(labelName);
                 }
 
+                // Recall we have opened an if block for this label
+                // so lets close this thing!
                 currentOutput += getIndentedLine(
-                        "//" + labelName + ":" + " labels are not supported in Javascript"
+                        "}\n"
                         , true);
+
+                // Since we were inside a label block, reduce indentation level
+                this.indentationLevel--;
 
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
@@ -846,33 +960,52 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
 
                 // Add variable name
                 currentOutput += getIndentedLine(
-                        varName
+                        "Variables[ \"" + varName + "\" ]"
                         , false);
+
+                // Since indexes could not exist yet, then we must use an Util function
+                // for checking their existence (create new objects if they do not exist)
+                // and then adding needed value
+                currentOutput += " = ";
 
                 if( arrayaccessor != null && arrayaccessor.getChildCount() > 0){
                     // Variable is an array, so we must first define it as an empty object
-                    if( !this.variables.contains(varName) ){
-                        // Add variable definition
-                        this.variables.add(varName);
+                    // Get all expressions for array indexes (as arrays)
+                    LPGrammarParser.ExpressionContext expressions[] = (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor);
 
-                        // Add variable definition
-                        currentOutput += " = {};\n";
-                        currentOutput += getIndentedLine(
-                                varName
-                                , false);
+                    // In this case, we must call assignateArray function
+                    // This function (which is defined statically at code's start) will
+                    // create an object and all nested subobjects needed for accessing
+                    // the array index successfully (just as Small Basic does)
+                    currentOutput += "assignateArray(";
 
-                    }
-                    // We need to add array accessor to target code
-                    currentOutput += getArrayAccessorsAsString(
-                            (LPGrammarParser.ExpressionContext[]) visit(arrayaccessor)
-                    );
+                    // First parameter is an array of built expressions
+                    // Recall all of them are evaluated by javascript
+                    currentOutput += expressionArrayAsString(expressions);
+
+                    // Second parameter is the target variable to be assignated
+                    currentOutput += ", ";
+
+                    // Add variable name
+                    currentOutput += varName;
+
+                    // Third parameter is the value to be assignated (Another expression)
+                    currentOutput += ", ";
+
+                    // Get expression
+                    currentOutput += visit(statementcomp.expression());
+
+                    // Close function call
+                    currentOutput += ")";
+
+                } else {
+                    // Assign an expression as usual
+
+                    // Get expression
+                    currentOutput += visit(statementcomp.expression());
                 }
-
-                // After getting all nested indexes, lets process assignation
-                currentOutput += " = ";
-
-                // Get expression
-                currentOutput += visit(statementcomp.expression());
+                // Recall built-in functions won't print a semicolon at the end
+                // in case we set inAssignation to true
                 currentOutput += ";\n";
 
                 inAssignation = false;
@@ -884,14 +1017,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     ctx.ifdeclaration(),
                     ctx.whiledeclaration(),
                     ctx.fordeclaration(),
-                    ctx.specialcall()
+                    ctx.specialcall(),
+                    ctx.labelcall()
             );
-
-            if (ctx.labelcall() != null) {
-                currentOutput += getIndentedLine(
-                        "//"+ ctx.labelcall().GOTO().getText() + " " + ctx.labelcall().IDENTIFIER().getText() + ":" + " goto calls are not supported in Javascript"
-                        , true);
-            }
         }
 
         if( ctx.statement() != null ){
@@ -902,6 +1030,21 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         return (T)currentOutput;
     }
 
+    // Check this out B)
+    @Override
+    public T visitLabelcall(LPGrammarParser.LabelcallContext ctx) {
+        String currentOutput = "";
+
+        String labelName = ctx.IDENTIFIER().getText();
+
+        currentOutput += getIndentedLine(
+                "Labels[\"" + labelName + "\"] = true;"
+                , true);
+        currentOutput += getIndentedLine(
+                "continue " + labelName + ";"
+                , true);
+        return (T)currentOutput;
+    }
     @Override
     public T visitExpression(LPGrammarParser.ExpressionContext ctx){
         // Visit an expression
@@ -1033,11 +1176,11 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 currentOutput += ", ";
 
                 // Second parameter is the array name (Which could match a variable name)
-                currentOutput += ctx.IDENTIFIER().getText();
+                currentOutput += "Variables[ \"" + ctx.IDENTIFIER().getText() + "\" ]" ;
                 currentOutput += ")";
             } else {
                 // Print variable name (its not an array so we don't care about its existence)
-                currentOutput += ctx.IDENTIFIER().getText();
+                currentOutput += "Variables[ \"" + ctx.IDENTIFIER().getText() + "\" ]" ;
             }
         } else if( ctx.NUMBER() != null ){
             // Print number
@@ -1550,7 +1693,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             LPGrammarParser.IfdeclarationContext ifdeclaration,
             LPGrammarParser.WhiledeclarationContext whiledeclaration,
             LPGrammarParser.FordeclarationContext fordeclaration,
-            LPGrammarParser.SpecialcallContext specialcall
+            LPGrammarParser.SpecialcallContext specialcall,
+            LPGrammarParser.LabelcallContext labelcall
     ){
         String currentOutput = "";
 
@@ -1570,6 +1714,10 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             // This is a special call case
             currentOutput += visit(specialcall);
         }
+        else if( labelcall != null ){
+            // This is a label call case
+            currentOutput += visit(labelcall);
+        }
 
         return currentOutput;
     }
@@ -1585,6 +1733,143 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         }
 
         return currentOutput + "]";
+    }
+
+    // Useful visitor for detecting labels definition within a block
+    // we will seek for them with a simplier visitor model and some useful Lists
+    // note we will be doing this only for certain blocks
+    // and yes, this is gonna increase complexity, but we think its worth it
+    //
+    // Labels can be defined inside the following bodies:
+    // Main (S), Function, If, While, For
+    // Fortunatelly for us, the last 4 use the same statement block :)
+    public class LabelDefinitionVisitor<T> extends LPGrammarBaseVisitor<T> {
+        // Define a custom mainstatement visitor
+        // This one is the first one, further calls must be
+        @Override
+        public T visitMainstatement(LPGrammarParser.MainstatementContext ctx){
+            // Note order is pretty neccesary here
+            ArrayList<String> labels = new ArrayList<>();
+
+            // Check if this statement has an IDENTIFIER
+            if( ctx.IDENTIFIER() != null ){
+                LPGrammarParser.MainstatementscompContext mainStatementsComp = ctx.mainstatementscomp();
+
+                // Finally check if this has a colon, if so, nice!
+                if( mainStatementsComp != null && mainStatementsComp.COLON() != null ){
+                    // We have a label!
+                    labels.add(ctx.IDENTIFIER().getText());
+                }
+            }
+
+            // Advance through further statements
+            // Note we are not interested in going further into depth definitions
+            // just keep looking for definitions
+            if( ctx.mainstatement() != null ){
+                labels.addAll((ArrayList<String>) visit(ctx.mainstatement()));
+            }
+
+            return (T)labels;
+        }
+
+        @Override
+        public T visitStatement(LPGrammarParser.StatementContext ctx){
+            // Note order is pretty neccesary here
+            ArrayList<String> labels = new ArrayList<>();
+
+            // Check if this statement has an IDENTIFIER
+            if( ctx.IDENTIFIER() != null ){
+                LPGrammarParser.StatementcompContext statementComp = ctx.statementcomp();
+
+                // Finally check if this has a colon, if so, nice!
+                if( statementComp != null && statementComp.COLON() != null ){
+                    // We have a label!
+                    labels.add(ctx.IDENTIFIER().getText());
+                }
+            }
+
+            // Advance through further statements
+            // Note we are not interested in going further into depth definitions
+            // just keep looking for definitions
+            if( ctx.statement() != null ){
+                labels.addAll((ArrayList<String>) visit(ctx.statement()));
+            }
+
+            return (T)labels;
+        }
+
+        // Function for generating read labels init code
+        public String getLabelsStartCode(
+                ArrayList<String> labels,
+                LPVisitor parentVisitor
+        ){
+            String currentOutput = "";
+
+            // Useful whiles are always ordered by label definition
+            for( String label : labels ){
+                currentOutput += getIndentedLine(
+                        label + ": while( true ) {",
+                        true
+                );
+
+                // Add identation, this will be seen kinda messy
+                // but useful at all
+                parentVisitor.indentationLevel++;
+            }
+
+            // Iterate again, but now adding ifs in reversed order
+            // These ifs will allow us to jump to the label
+            // or at least simulate the proccess
+            for( int i = labels.size() - 1; i >= 0; i-- ){
+                String label = labels.get(i);
+                currentOutput += getIndentedLine(
+                        "if( ! Labels [\""+ label + "\"] ) {",
+                        true
+                );
+
+                // Add identation, this will be seen kinda messy
+                // but useful at all (again)
+                parentVisitor.indentationLevel++;
+
+                // Reassign labels control flow
+                currentOutput += getIndentedLine(
+                        "Labels [\""+ label + "\"] = false;",
+                        true
+                );
+            }
+
+            return currentOutput;
+        }
+
+        // Function for getting function's end code
+        public String getLabelEndCode(
+                ArrayList<String> labels,
+                LPVisitor parentVisitor
+        ) {
+
+            String currentOutput = "";
+
+            // Iterate in reverse, recall we break whiles
+            // in reversed order
+            for( int i = labels.size() - 1; i >= 0; i-- ){
+                String label = labels.get(i);
+                currentOutput += getIndentedLine(
+                        "break " + label + ";",
+                        true
+                );
+
+                // Remove one identation level
+                parentVisitor.indentationLevel--;
+
+                currentOutput += getIndentedLine(
+                        "} // Ends label " + label,
+                        true
+                );
+            }
+            // System.out.println("Indentation level: " + parentVisitor.indentationLevel);
+
+            return currentOutput;
+        }
     }
 
 }

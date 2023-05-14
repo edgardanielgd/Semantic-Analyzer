@@ -1,8 +1,9 @@
+package src;
 import java.io.*;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
-import gen.*;
+import src.gen.*;
 import src.LPVisitor;
 
 public class Main {
@@ -10,7 +11,7 @@ public class Main {
 
         String rootPath = System.getProperty("user.dir");
 
-        String destFile = rootPath+"\\output\\output.js";
+        String destFile = rootPath+"./src/output/output.js";
 
         if( args.length > 1 )
             destFile = args[1];
@@ -18,6 +19,7 @@ public class Main {
         // Common class definition
         LPGrammarLexer lexer = new LPGrammarLexer(
             CharStreams.fromReader(
+                // new FileReader("./src/input/test.txt")
                 new BufferedReader(
                     new InputStreamReader(System.in)
                 )

@@ -1,5 +1,5 @@
 // Generated from C:/Users/Jhonatan/Documents/PD-J/UN/2023I-SVII/PL/ANTLR/SemanticUNCode/src/grammar\LPGrammar.g4 by ANTLR 4.12.0
-package gen;
+package src.gen;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ErrorNode;

@@ -2,7 +2,7 @@
 // 3rd Practice (Semmantic Analyzer)
 // Created by:
 // Miguel Angel Puentes Cespedes
-// Jhonatan Steven Rodriguez Ibañez
+// Jhonatan Steven Rodriguez IbaÃ±ez
 // Edgar Daniel Gonzalez Diaz
 
 /* Utility Functions and Classes */
@@ -172,67 +172,100 @@ function assignateArray( indexes_sequence, origin, value ){
 /* End of utility functions and classes */
 
 /* Global variables */
-var test5;
-var test3;
-var i;
+var Variables = {
+	test5 : undefined,
+	test3 : undefined,
+	i : undefined,
+};
+
 /* End of global variables */
+
+/* Labels */
+var Labels = {
+	loop : false,
+	salto : false,
+};
+
+/* End of labels */
 
 /* Global functions prototypes */
 /* This JSON Object is intentionally called 'Sub', a trick which will prevent 
  Small Basic variables to have crossed names with global functions container*/
 var Sub = {
+	"control" : async () => {},
 };
 /* End of global functions prototypes */
 
 /* Global functions definitions */
+Sub["control"] = async () => 	// Function declaration
+	{
+		/* Function body */
+		salto: while( true ) {
+			loop: while( true ) {
+				if( ! Labels ["loop"] ) {
+					Labels ["loop"] = false;
+					if( ! Labels ["salto"] ) {
+						Labels ["salto"] = false;
+						Labels["salto"] = true;
+						continue salto;
+						customPrintLine( "Esto no debe imprimirse" );
+						}
+
+					Variables[ "i" ] = 20;
+					// While declaration
+					while ( Variables[ "i" ] > 0) {
+						/* While body */
+						Variables[ "test3" ] = Variables[ "i" ] - 3 * (Variables[ "i" ] / 3);
+						Variables[ "test5" ] = Variables[ "i" ] - 5 * (Variables[ "i" ] / 5);
+						// If declaration
+						if ( Variables[ "test3" ] == 0 && Variables[ "test5" ] == 0) {
+							/* If body */
+							customPrintLine( Variables[ "i" ] + " Fizzbuzz" );
+						} else if ( Variables[ "test3" ] == 0) {
+							/* Else if body */
+							customPrintLine( Variables[ "i" ] + " Fizz" );
+						} else if ( Variables[ "test5" ] == 0) {
+							/* Else if body */
+							customPrintLine( Variables[ "i" ] + " Buzz" );
+						}
+						Variables[ "i" ] = Variables[ "i" ] - 1;
+					}
+					customPrintLine( "" );
+					customPrintLine( "- Con etiquetas -" );
+					customPrintLine( "" );
+					Variables[ "i" ] = 20;
+					}
+
+				Variables[ "test3" ] = Variables[ "i" ] - 3 * (Variables[ "i" ] / 3);
+				Variables[ "test5" ] = Variables[ "i" ] - 5 * (Variables[ "i" ] / 5);
+				// If declaration
+				if ( Variables[ "test3" ] == 0 && Variables[ "test5" ] == 0) {
+					/* If body */
+					customPrintLine( Variables[ "i" ] + " Fizzbuzz" );
+				} else if ( Variables[ "test3" ] == 0) {
+					/* Else if body */
+					customPrintLine( Variables[ "i" ] + " Fizz" );
+				} else if ( Variables[ "test5" ] == 0) {
+					/* Else if body */
+					customPrintLine( Variables[ "i" ] + " Buzz" );
+				}
+				Variables[ "i" ] = Variables[ "i" ] - 1;
+				// If declaration
+				if ( Variables[ "i" ] > 0) {
+					/* If body */
+					Labels["loop"] = true;
+					continue loop;
+				}
+				break loop;
+			} // Ends label loop
+			break salto;
+		} // Ends label salto
+	}
 /* End of global functions definitions */
 
 // Main Function
 async function MAIN() {
-	//Goto salto: goto calls are not supported in Javascript
-	customPrintLine( "Esto no debe imprimirse" );
-	//salto: labels are not supported in Javascript
-	i = 20;
-	// While declaration
-	while ( i > 0) {
-		/* While body */
-		test3 = i - 3 * (i / 3);
-		test5 = i - 5 * (i / 5);
-		// If declaration
-		if ( test3 == 0 && test5 == 0) {
-			/* If body */
-			customPrintLine( i + " Fizzbuzz" );
-		} else if ( test3 == 0) {
-			/* Else if body */
-			customPrintLine( i + " Fizz" );
-		} else if ( test5 == 0) {
-			/* Else if body */
-			customPrintLine( i + " Buzz" );
-		}		i = i - 1;
-	}
-	customPrintLine( "" );
-	customPrintLine( "- Con etiquetas -" );
-	customPrintLine( "" );
-	i = 20;
-	//loop: labels are not supported in Javascript
-	test3 = i - 3 * (i / 3);
-	test5 = i - 5 * (i / 5);
-	// If declaration
-	if ( test3 == 0 && test5 == 0) {
-		/* If body */
-		customPrintLine( i + " Fizzbuzz" );
-	} else if ( test3 == 0) {
-		/* Else if body */
-		customPrintLine( i + " Fizz" );
-	} else if ( test5 == 0) {
-		/* Else if body */
-		customPrintLine( i + " Buzz" );
-	}	i = i - 1;
-	// If declaration
-	if ( i > 0) {
-		/* If body */
-		//Goto loop: goto calls are not supported in Javascript
-	}
+	await Sub["control"]();
 
 }
 // Create main div component for output
