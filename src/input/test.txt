@@ -1,0 +1,15 @@
+' Estructuras de datos
+
+tamaño_del_arreglo = 5
+
+For i = 1 To tamaño_del_arreglo
+   userNums[i] = i * 2
+   userVals[4-i] = (4 * i) / 2
+EndFor
+
+Stack.PushValue(mi_stack, userNums[3])
+Stack.PushValue(mi_stack, userVals[3])
+
+For i = 1 To tamaño_del_arreglo
+   mi_dict["Parte " + i] = userNums[i]
+EndFor

@@ -59,6 +59,9 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // by itself (useful for special calls, which can be assigned or just called)
     Boolean inAssignation = false;
 
+    // Saving current label name (if any) and its related sentences
+    Boolean labelMode = false;
+
     // Utilities for "console" element inside custom HTML div
     // Console logs and errors will be printed there
 
@@ -304,7 +307,7 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
             true
         );
 
-        // Lets define things in a beautiful way
+        // Let's define things in a beautiful way
         this.indentationLevel++;
 
         for( Map.Entry<String, String> function : this.functions.entrySet() ) {
@@ -377,7 +380,6 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
         // Visit a statement
         // Resulting code will be defined as:
         // <statement> ;
-
         String currentOutput = "";
 
         // If there is an identifier, then there are some cases to consider
@@ -400,11 +402,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 }
 
                 currentOutput += getIndentedLine(
-                        labelName + ":"
-                        , false);
-
-                // TODO: Print needed javascript code for simulating labels and Goto instructions
-
+                        "//" + labelName + ":" + " labels are not supported in Javascript"
+                        , true);
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
                 // Presented in the form:
@@ -506,6 +505,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     ctx.fordeclaration(),
                     ctx.specialcall()
             );
+
+            if (ctx.labelcall() != null) {
+                currentOutput += getIndentedLine(
+                        "//"+ ctx.labelcall().GOTO().getText() + " " + ctx.labelcall().IDENTIFIER().getText() + ":" + " goto calls are not supported in Javascript"
+                        , true);
+            }
         }
 
         // Process further statements
@@ -810,10 +815,8 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                 }
 
                 currentOutput += getIndentedLine(
-                        labelName + ":"
-                        , false);
-
-                // TODO: Print needed javascript code for simulating labels and Goto instructions
+                        "//" + labelName + ":" + " labels are not supported in Javascript"
+                        , true);
 
             } else if( statementcomp.LPAREN() != null ){
                 // This is a function call case
@@ -883,6 +886,12 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
                     ctx.fordeclaration(),
                     ctx.specialcall()
             );
+
+            if (ctx.labelcall() != null) {
+                currentOutput += getIndentedLine(
+                        "//"+ ctx.labelcall().GOTO().getText() + " " + ctx.labelcall().IDENTIFIER().getText() + ":" + " goto calls are not supported in Javascript"
+                        , true);
+            }
         }
 
         if( ctx.statement() != null ){
@@ -1517,9 +1526,13 @@ public class LPVisitor<T> extends LPGrammarBaseVisitor<T> {
     // Useful function for printing with indentation certain block codes
     public String getIndentedLine(String line, Boolean newLine){
         // sometimes we may not add a new line, for example, within If conditions
-        return "\t".repeat(this.indentationLevel) + line + (
+        return repeatString("\t", this.indentationLevel) + line + (
             newLine ? "\n" : ""
             );
+    }
+
+    public String repeatString(String string, int times){
+        return new String(new char[times]).replace("\0", string);
     }
     public String getArrayAccessorsAsString(LPGrammarParser.ExpressionContext[] accessors){
         // Get accessors as string

@@ -1,4 +1,4 @@
-// Generated from D:/UNALArchivo/Lenguajes de Programacion/SemanticAnalyzer/grammar\LPGrammar.g4 by ANTLR 4.12.0
+// Generated from C:/Users/Jhonatan/Documents/PD-J/UN/2023I-SVII/PL/ANTLR/SemanticUNCode/src/grammar\LPGrammar.g4 by ANTLR 4.12.0
 package gen;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 

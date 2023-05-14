@@ -206,7 +206,7 @@ TRUE : '"' T R U E '"';
 FALSE : '"' F A L S E '"';
 
 // SPECIAL TOKENS
-IDENTIFIER : [a-zA-Z][_a-zA-Z0-9]*;
+IDENTIFIER : [a-zA-Z][_a-zA-Z0-9\u00E0-\u00FC\u00C0-\u00DC\u00E1\u00E9\u00ED\u00F3\u00FA\u00FD\u00C1\u00C9\u00CD\u00D3\u00DA\u00DD\u00E2\u00EA\u00EE\u00F4\u00FB\u00C2\u00CA\u00CE\u00D4\u00DB\u00C3\u00F1\u00F5\u00D1\u00D5\u00E4\u00EB\u00EF\u00F6\u00FC\u00FF\u00C4\u00CB\u00CF\u00D6\u00DC\u0178\u00E7\u00DF\u00D8\u00F8\u00C5\u00E5\u00C6\u00E6\u0152\u0153]*;
 NUMBER : [0-9]+('.'([0-9]*))?; // A single point is allowed
 TEXT : '"' ( '\\' . | ~('\\'|'"') )* '"';
 COMMENT: '\'' .*? '\n' -> skip; // Single line comments

@@ -8,23 +8,20 @@ import src.LPVisitor;
 public class Main {
     public static void main(String[] args) throws IOException{
 
-        // Get drc and dest files from console
-        String srcFile = "./input/test.txt";
-        if( args.length > 0 )
-            srcFile = args[0];
+        String rootPath = System.getProperty("user.dir");
 
-        String destFile = "output/output.js";
+        String destFile = rootPath+"\\output\\output.js";
+
         if( args.length > 1 )
             destFile = args[1];
 
         // Common class definition
         LPGrammarLexer lexer = new LPGrammarLexer(
-            /*CharStreams.fromReader(
+            CharStreams.fromReader(
                 new BufferedReader(
                     new InputStreamReader(System.in)
                 )
-            )*/
-            CharStreams.fromFileName(srcFile)
+            )
         );
         CommonTokenStream tokens = new CommonTokenStream(
             lexer
@@ -42,7 +39,7 @@ public class Main {
         // a translation from Small Basic to Javascript
 
         String output = (String)visitor.visit(tree);
-        // System.out.println(output);
+        System.out.println(output);
         FileOutputStream writer = new FileOutputStream(destFile);
         writer.write(output.getBytes());
     }

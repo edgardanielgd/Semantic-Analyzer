@@ -2,7 +2,7 @@
 // 3rd Practice (Semmantic Analyzer)
 // Created by:
 // Miguel Angel Puentes Cespedes
-// Jhonatan Steven Rodriguez IbaÃ±ez
+// Jhonatan Steven Rodriguez Ibañez
 // Edgar Daniel Gonzalez Diaz
 
 /* Utility Functions and Classes */
@@ -172,88 +172,67 @@ function assignateArray( indexes_sequence, origin, value ){
 /* End of utility functions and classes */
 
 /* Global variables */
-var a;
-var b;
-var olademar;
-var c;
-var cosa;
-var casita2;
-var casita3;
-var count;
-var x;
-var False;
-var casita;
-var algo;
+var test5;
+var test3;
+var i;
 /* End of global variables */
 
 /* Global functions prototypes */
 /* This JSON Object is intentionally called 'Sub', a trick which will prevent 
  Small Basic variables to have crossed names with global functions container*/
 var Sub = {
-	"ola" : async () => {},
 };
 /* End of global functions prototypes */
 
 /* Global functions definitions */
-Sub["ola"] = async () => 	// Function declaration
-	{
-		/* Function body */
-		cosa = 2;
-		// If declaration
-		if ( olademar = 4 + 2 * 3) {
-			/* If body */
-			cosa = 3 * 2 <= 6;
-			// For declaration
-			for ( let i = 2; i <= 4; i += 2) {
-				/* For body */
-				cosa = 3 * 2 <= 6;
-			}
-		}
-		// While declaration
-		while ( algo - 3 * 2 <= 6) {
-			/* While body */
-			algo = 3 * 2 <= 6;
-			// If declaration
-			if ( casita && casita2 && casita3 && false) {
-				/* If body */
-				customPrintLine( "Hola" );
-				await sleep( 200);
-				// For declaration
-				for ( let k = 2; k <= 5; k += 3) {
-					/* For body */
-					customPrintLine( "Hola" );
-					await sleep( 200);
-				}
-				// For declaration
-				for ( let b = 2; b <= 10; b++) {
-					/* For body */
-					Stack.pushStack( "myarray" , b );
-				}
-				await Sub["ola"]();
-				count = Stack.popStack( "myarray" ) ;
-				customPrintLine( count );
-			}
-		}
-	}
 /* End of global functions definitions */
 
 // Main Function
 async function MAIN() {
-	a = prompt() * 1 ;
-	b = prompt() * 1 ;
-	c = a + b;
-	// If declaration
-	if ( c > 3) {
-		/* If body */
-		customPrintLine( "Hola" );
-	} else {
-		/* Else body */
-		customPrintLine( "Adios" );
+	//Goto salto: goto calls are not supported in Javascript
+	customPrintLine( "Esto no debe imprimirse" );
+	//salto: labels are not supported in Javascript
+	i = 20;
+	// While declaration
+	while ( i > 0) {
+		/* While body */
+		test3 = i - 3 * (i / 3);
+		test5 = i - 5 * (i / 5);
+		// If declaration
+		if ( test3 == 0 && test5 == 0) {
+			/* If body */
+			customPrintLine( i + " Fizzbuzz" );
+		} else if ( test3 == 0) {
+			/* Else if body */
+			customPrintLine( i + " Fizz" );
+		} else if ( test5 == 0) {
+			/* Else if body */
+			customPrintLine( i + " Buzz" );
+		}		i = i - 1;
 	}
-	a = 2;
-	b = 50 * getArrayValue([3, 2, 1, ], x);
-	customPrintLine( b );
-	a = assignateArray(["3", 2, False, 2 * 3 + 2, ], a, getArrayValue(["3", 2, ], a));
+	customPrintLine( "" );
+	customPrintLine( "- Con etiquetas -" );
+	customPrintLine( "" );
+	i = 20;
+	//loop: labels are not supported in Javascript
+	test3 = i - 3 * (i / 3);
+	test5 = i - 5 * (i / 5);
+	// If declaration
+	if ( test3 == 0 && test5 == 0) {
+		/* If body */
+		customPrintLine( i + " Fizzbuzz" );
+	} else if ( test3 == 0) {
+		/* Else if body */
+		customPrintLine( i + " Fizz" );
+	} else if ( test5 == 0) {
+		/* Else if body */
+		customPrintLine( i + " Buzz" );
+	}	i = i - 1;
+	// If declaration
+	if ( i > 0) {
+		/* If body */
+		//Goto loop: goto calls are not supported in Javascript
+	}
 
 }
 // Create main div component for output
